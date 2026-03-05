@@ -1,0 +1,95 @@
+version: "3.8"
+
+# Common configuration for pulp services
+x-pulp-common: &pulp-common
+  image: docker.io/pulp/pulp:latest
+  depends_on:
+    - postgres
+    - redis
+  environment:
+    - PULP_DATABASES__default__ENGINE=django.db.backends.postgresql
+    - PULP_DATABASES__default__NAME=pulp
+    - PULP_DATABASES__default__USER=pulp
+    - PULP_DATABASES__default__PASSWORD=${PULP_DB_PASSWORD}
+    - PULP_DATABASES__default__HOST=postgres
+    - PULP_REDIS_URL=redis://redis:6379/1
+  volumes:
+    - pulp_settings:/etc/pulp
+    - pulp_storage:/var/lib/pulp
+
+# Pulp services
+services:
+  postgres:
+    image: docker.io/postgres:16
+    environment:
+      POSTGRES_USER: pulp
+      POSTGRES_PASSWORD: ${PULP_DB_PASSWORD}
+      POSTGRES_DB: pulp
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pgsql_data:/var/lib/postgresql/data
+
+  redis:
+    image: docker.io/redis:latest
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  pulp_api:
+    <<: *pulp-common
+    command: pulp-api
+    ports:
+      - "24817:24817"
+
+  pulp_content:
+    <<: *pulp-common
+    command: pulp-content
+    ports:
+      - "24816:24816"
+
+  pulp_worker:
+    <<: *pulp-common
+    command: pulp-worker
+
+  web:
+    image: docker.io/nginx:latest
+    ports:
+      - "8080:80"
+    volumes:
+      - nginx_conf:/etc/nginx/conf.d
+    depends_on:
+      - pulp_api
+      - pulp_content
+
+# Dir-type volumes
+volumes:
+  pgsql_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PULP_BASE_DIR:-./pulp_data}/pgsql
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PULP_BASE_DIR:-./pulp_data}/redis_data
+  pulp_settings:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PULP_BASE_DIR:-./pulp_data}/settings
+  pulp_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PULP_BASE_DIR:-./pulp_data}/pulp_storage
+  nginx_conf:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PULP_BASE_DIR:-./pulp_data}/nginx_conf
