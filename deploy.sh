@@ -6,7 +6,9 @@ set -euxo pipefail
 echo "Starting Pulp Project deployment prep ..."
 
 # Set database password
-export PULP_DB_PASSWORD="pulpdb123"
+export PULP_DB_NAME=${PULP_DB_NAME:-"pulp"}
+export PULP_DB_USER=${PULP_DB_USER:-"pulp"}
+export PULP_DB_PASSWORD=${PULP_DB_PASSWORD:-"pulpdb123"}
 
 # Set PULP_API_URL using host IP (fallback to localhost)
 PULP_IP=$(hostname -I | awk '{print $1}')

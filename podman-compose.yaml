@@ -3,13 +3,10 @@ version: "3.8"
 # Common configuration for pulp services
 x-pulp-common: &pulp-common
   image: docker.io/pulp/pulp:latest
-  depends_on:
-    - postgres
-    - redis
   environment:
     - PULP_DATABASES__default__ENGINE=django.db.backends.postgresql
-    - PULP_DATABASES__default__NAME=pulp
-    - PULP_DATABASES__default__USER=pulp
+    - PULP_DATABASES__default__NAME=${PULP_DB_NAME}
+    - PULP_DATABASES__default__USER=${PULP_DB_USER}
     - PULP_DATABASES__default__PASSWORD=${PULP_DB_PASSWORD}
     - PULP_DATABASES__default__HOST=postgres
     - PULP_REDIS_URL=redis://redis:6379/1
@@ -22,34 +19,68 @@ services:
   postgres:
     image: docker.io/postgres:16
     environment:
-      POSTGRES_USER: pulp
+      POSTGRES_USER: ${PULP_DB_USER}
       POSTGRES_PASSWORD: ${PULP_DB_PASSWORD}
-      POSTGRES_DB: pulp
+      POSTGRES_DB: ${PULP_DB_NAME}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - pgsql_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PULP_DB_USER} -d ${PULP_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: docker.io/redis:latest
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   pulp_api:
     <<: *pulp-common
-    command: pulp-api
+    command: bash -c "pulpcore-manager migrate --noinput && pulp-api"
     ports:
       - "24817:24817"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          curl -sf http://127.0.0.1:24817/pulp/api/v3/status/
+          || curl -sf http://[::1]:24817/pulp/api/v3/status/
+          || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
 
   pulp_content:
     <<: *pulp-common
     command: pulp-content
     ports:
       - "24816:24816"
+    depends_on:
+      pulp_api:
+        condition: service_healthy
 
   pulp_worker:
     <<: *pulp-common
     command: pulp-worker
+    depends_on:
+      pulp_api:
+        condition: service_healthy
 
   web:
     image: docker.io/nginx:latest
@@ -58,8 +89,8 @@ services:
     volumes:
       - nginx_conf:/etc/nginx/conf.d
     depends_on:
-      - pulp_api
-      - pulp_content
+      pulp_api:
+        condition: service_healthy
 
 # Dir-type volumes
 volumes:
