@@ -40,6 +40,10 @@ openssl rand -base64 32 > ${PULP_BASE_DIR}/settings/certs/database_fields.symmet
 # Set execute permissions for base directory
 podman unshare chmod -R 755 ${PULP_BASE_DIR}
 
+# Enable linger for the current user
+echo "Enabling linger for the current user ..."
+loginctl enable-linger $(id -u)
+
 # Deploy pulp project using podman compose
 echo "Deploy pulp project using podman compose ..."
 podman-compose -f ./podman-compose.yaml up -d
