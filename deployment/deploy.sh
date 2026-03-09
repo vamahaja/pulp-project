@@ -6,32 +6,32 @@ set -euxo pipefail
 echo "Starting Pulp Project deployment prep ..."
 
 # Set database password
-export PULP_DB_NAME=${PULP_DB_NAME:-"pulp"}
+export PULP_DB_NAME=${PULP_DB_NAME:-"pulpdb"}
 export PULP_DB_USER=${PULP_DB_USER:-"pulp"}
-export PULP_DB_PASSWORD=${PULP_DB_PASSWORD:-"pulpdb123"}
+export PULP_DB_PASSWORD=${PULP_DB_PASSWORD:-"pulp123"}
 
 # Set PULP_API_URL using host IP (fallback to localhost)
 PULP_IP=$(hostname -I | awk '{print $1}')
 export PULP_API_URL="http://${PULP_IP}:24817"
 
-# Check if a base directory was provided
-if [ -z "${1:-}" ]; then
-    echo "Error: No deployment directory provided."
-    echo "Usage: ./deploy.sh /path/to/your/pulp_data"
-    exit 1
+# Set default pulp directory if not provided
+PULP_BASE_DIR="./pulp-data"
+if [ -n "${1:-}" ]; then
+    echo "Using user provided PULP_BASE_DIR=$1"
+    PULP_BASE_DIR=${1}
 fi
 
-# Set and export base directory for dir-type volumes (used by podman-compose)
-export PULP_BASE_DIR="$(realpath "$1")"
+# Set and export pulp directory for dir-type volumes
+export PULP_BASE_DIR="$(realpath "$PULP_BASE_DIR")"
 echo "Using PULP_BASE_DIR=$PULP_BASE_DIR"
 
-# Create required directories for pulp project (dir-type volumes)
+# Create required directories for pulp data
 echo "Create directory-type volume dirs in $PULP_BASE_DIR for podman compose ..."
 mkdir -p "${PULP_BASE_DIR}"/{pgsql,pulp_storage,settings,redis_data,nginx_conf}
 
 # Copy nginx.conf to the deployment directory
 echo "Copy nginx.conf to $PULP_BASE_DIR ..."
-cp nginx.conf "${PULP_BASE_DIR}/nginx_conf/nginx.conf"
+cp config/nginx.conf "${PULP_BASE_DIR}/nginx_conf/nginx.conf"
 
 # Generate SSL certificate and key
 mkdir -p ${PULP_BASE_DIR}/settings/certs
@@ -69,3 +69,4 @@ while [ "$attempt" -le "$max_attempts" ]; do
 done
 
 echo "pulp_api is ready at $PULP_API_URL."
+echo "Access Pulp API docs at $PULP_API_URL/pulp/api/v3/docs/"

@@ -99,28 +99,28 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: ${PULP_BASE_DIR:-./pulp_data}/pgsql
+      device: ${PULP_BASE_DIR:-./pulp-data}/pgsql
   redis_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${PULP_BASE_DIR:-./pulp_data}/redis_data
+      device: ${PULP_BASE_DIR:-./pulp-data}/redis_data
   pulp_settings:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${PULP_BASE_DIR:-./pulp_data}/settings
+      device: ${PULP_BASE_DIR:-./pulp-data}/settings
   pulp_storage:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${PULP_BASE_DIR:-./pulp_data}/pulp_storage
+      device: ${PULP_BASE_DIR:-./pulp-data}/pulp_storage
   nginx_conf:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: ${PULP_BASE_DIR:-./pulp_data}/nginx_conf
+      device: ${PULP_BASE_DIR:-./pulp-data}/nginx_conf

@@ -18,19 +18,23 @@ sudo dnf install podman podman-compose
 Run the deployment script with a base directory for persistent data:
 
 ```bash
-./deploy.sh /path/to/your/pulp_data
+cd deployment && chmod +x ./deploy.sh
+```
+
+```bash
+./deploy.sh /path/to/your/pulp-data
 ```
 
 Example:
 
 ```bash
-./deploy.sh /opt/pulp_data
+./deploy.sh /opt/pulp-data
 ```
 
 The script will:
 
 1. Create the required directories under the path you provide
-2. Copy `nginx.conf` into the deployment directory
+2. Copy `config/nginx.conf` into the deployment directory
 3. Generate a symmetric key for database fields under `settings/certs/`
 4. Set permissions for Podman volume bind mounts
 5. Start all services with `podman-compose`
@@ -59,13 +63,14 @@ Under your base directory (e.g. `/opt/pulp_data`), the script creates:
 - **API (direct):** `http://<host>:24817/pulp/api/v3/`
 - **API (via Nginx):** `http://<host>:8080/pulp/api/`
 - **Content (via Nginx):** `http://<host>:8080/pulp/content/`
+- **Documentation (via Nginx):** `http://<host>:8080/pulp/api/v3/docs/`
 
-The script sets `PULP_API_URL` using the host’s first IP (e.g. `http://192.168.1.10:24817`) for health checks.
+The script sets `PULP_API_URL` using the host’s first IP for health checks.
 
 ## Configuration
 
-- **Database password:** Set in the script as `PULP_DB_PASSWORD` (default: `pulpdb123`). Change it in `deploy.sh` before first run if needed.
-- **Base directory:** Must be passed as the first argument; there is no default path in the script (though `podman-compose.yaml` uses `./pulp_data` if `PULP_BASE_DIR` is unset when run manually).
+- **Database password:** Set in the script as `PULP_DB_PASSWORD` (default: `pulp123`). Change it in `deploy.sh` before first run if needed.
+- **Base directory:** Must be passed as the first argument; there is no default path in the script (default: `./pulp-data`).
 
 ## Managing the Stack
 
