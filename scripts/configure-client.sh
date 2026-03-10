@@ -115,9 +115,12 @@ set_user_permissions() {
         "rpm.rpmrepository_creator"
         "rpm.rpmremote_creator"
         "rpm.rpmdistribution_creator"
+        "rpm.rpmpublication_creator"
         "deb.aptrepository_creator"
         "deb.aptremote_creator"
         "deb.aptdistribution_creator"
+        "deb.aptpublication_creator"
+        "deb.verbatimpublication_creator"
         "core.upload_creator"
     )
 
