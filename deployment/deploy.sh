@@ -15,17 +15,6 @@ export PULP_ADMIN_PASSWORD=${PULP_ADMIN_PASSWORD:-"pulp123"}
 export PULP_USERNAME=${PULP_USERNAME:-"cephuser"}
 export PULP_PASSWORD=${PULP_PASSWORD:-"cephuser123"}
 
-# Set pulp user permissions
-ROLES=(
-    "rpm.rpmrepository_creator"
-    "rpm.rpmremote_creator"
-    "rpm.rpmdistribution_creator"
-    "deb.aptrepository_creator"
-    "deb.aptremote_creator"
-    "deb.aptdistribution_creator"
-    "core.upload_creator"
-)
-
 # Set PULP_API_URL using host IP (fallback to localhost)
 PULP_IP=$(hostname -I | awk '{print $1}')
 export PULP_API_URL="http://${PULP_IP}:24817"
@@ -104,27 +93,6 @@ if [ "$response" == "null" ] || [ -z "$response" ]; then
     echo "Error: Could not create user $PULP_USERNAME"
     exit 1
 fi
-
-# Get href of the new user
-USER_HREF=$(curl -s -u admin:${PULP_ADMIN_PASSWORD} \
-    ${PULP_SERVER_URL}/pulp/api/v3/users/?username=${PULP_USERNAME} | jq -r '.results[0].pulp_href')
-if [ "$USER_HREF" == "null" ] || [ -z "$USER_HREF" ]; then
-    echo "Error: Could not find user $PULP_USERNAME in the response"
-    exit 1
-fi
-
-# Set pulp user permissions
-for role in "${ROLES[@]}"; do
-    echo "Assigning $role..."
-    response=$(curl -s -o /dev/null -w "%{http_code}\n" -u admin:${PULP_ADMIN_PASSWORD} \
-         -X POST ${PULP_SERVER_URL}/pulp/api/v3/role-assignments/ \
-         -H "Content-Type: application/json" \
-         -d "{\"users\": [\"$USER_HREF\"], \"role\": \"$role\"}")
-
-    if [ "$response" != "201" ]; then
-        echo "Error: Failed to assign $role to $PULP_USERNAME"
-    fi
-done
 
 # Print pulp_api status
 echo "pulp_api is ready at $PULP_API_URL."
