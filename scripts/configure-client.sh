@@ -106,9 +106,6 @@ install_client() {
     if pulp --version &>/dev/null; then
         echo "Installing pulp client plugins ..."
         pip install pulp-rpm pulp-deb pulp-cli-deb
-
-        # Install pulp-cli-deb plugin, to avoid split-brain issue with pulp-cli-deb
-        # pip install --user pulp-cli-deb
     fi
 }
 
