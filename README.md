@@ -39,6 +39,8 @@ The script will:
 4. Set permissions for Podman volume bind mounts
 5. Start all services with `podman-compose`
 6. Wait until the Pulp API is ready (checks every 20 seconds, up to ~30 minutes)
+7. Reset admin password (default: `pulp123`)
+8. Create non-admin user with username and password (default: `cephuser/cephuser123`)
 
 ## What Gets Created
 
@@ -69,8 +71,17 @@ The script sets `PULP_API_URL` using the host’s first IP for health checks.
 
 ## Configuration
 
-- **Database password:** Set in the script as `PULP_DB_PASSWORD` (default: `pulp123`). Change it in `deploy.sh` before first run if needed.
-- **Base directory:** Must be passed as the first argument; there is no default path in the script (default: `./pulp-data`).
+Defaults are set in `deploy.sh`; override any of these via environment variables (or, for the base directory, the first script argument) before running.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PULP_DB_NAME` | `pulpdb` | PostgreSQL database name |
+| `PULP_DB_USER` | `pulp` | PostgreSQL user |
+| `PULP_DB_PASSWORD` | `pulp123` | PostgreSQL password |
+| `PULP_ADMIN_PASSWORD` | `pulp123` | Pulp admin (reset after deploy) |
+| `PULP_USERNAME` | `cephuser` | Pulp API user created by the script |
+| `PULP_PASSWORD` | `cephuser123` | Password for `PULP_USERNAME` |
+| Base directory (1st arg) | `./pulp-data` | Data directory; pass as first argument or leave unset to use default |
 
 ## Managing the Stack
 
