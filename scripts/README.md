@@ -7,13 +7,13 @@ Helper scripts for configuring a Pulp client and managing Ceph-style repositorie
 - **Bash** – scripts require a Bash shell
 - **Python 3** with **pip** – for installing the Pulp CLI and plugins
 - **jq** – used by `publish-packages.sh` to parse JSON (install with `dnf install jq` or `apt install jq`)
-- **Pulp server** – a Pulp instance must already be running and reachable (see the project root [README](../README.md) for deployment with Podman)
+- **Pulp server** – a Pulp instance must already be running and reachable (see the deployment document [document](../deployment/README.md) for deployment with Podman)
 
 ## Setup
 
 1. **Deploy Pulp** (if not already done):
 
-   From the project root, use the deployment script as described in the main [README](../README.md), e.g.:
+   From the deployment, use the deployment script as described in the document [document](../deployment/README.md), e.g.:
 
    ```bash
    cd deployment && ./deploy.sh /path/to/pulp-data
