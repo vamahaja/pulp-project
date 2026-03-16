@@ -5,6 +5,7 @@ set -euo pipefail
 
 # Default values
 PROJECT=${PROJECT:-"ceph"}
+PULP_ADMIN_USERNAME=${PULP_ADMIN_USERNAME:-"admin"}
 PULP_ADMIN_PASSWORD=${PULP_ADMIN_PASSWORD:-"pulp123"}
 
 # Show help message
@@ -15,13 +16,14 @@ Usage: configure-client.sh [OPTIONS]
 Set up a Pulp client configuration.
 
 Required:
-    --username USERNAME     Username
-    --password PASSWORD     Password
+    --username USERNAME     Username for authentication
+    --password PASSWORD     Password for authentication
     --set-user-permissions  Add user permissions to the Pulp server (default: false)
     --overwrite             Overwrite existing configuration (default: false)
 
 Environment:
     PULP_SERVER_URL     Pulp server URL
+    PULP_ADMIN_USERNAME Pulp admin username (default: admin)
     PULP_ADMIN_PASSWORD Pulp admin password
 
 Examples:
@@ -121,6 +123,9 @@ set_user_permissions() {
         "deb.aptdistribution_creator"
         "deb.aptpublication_creator"
         "deb.verbatimpublication_creator"
+        "container.containerrepository_creator"
+        "container.containerremote_creator"
+        "container.containerdistribution_creator"
         "core.upload_creator"
     )
 
@@ -128,7 +133,7 @@ set_user_permissions() {
         echo "Assigning $role to user $USERNAME ..."
 
         # Grant cephuser the ability to create RPM repositories (ignore if already assigned)
-        if ! output=$(pulp --username admin --password ${PULP_ADMIN_PASSWORD} \
+        if ! output=$(pulp --username ${PULP_ADMIN_USERNAME} --password ${PULP_ADMIN_PASSWORD} \
             user role-assignment add \
             --username "${USERNAME}" \
             --role "$role" \

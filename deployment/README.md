@@ -39,13 +39,13 @@ The script will:
 
 1. Create the required directories under the path you provide
 2. Copy `config/nginx.conf` into the base data directory at `nginx_conf/nginx.conf`
-3. Generate a symmetric key for database fields under `settings/certs/`
+3. Generate under `settings/certs/`: a symmetric key for database fields, and a key pair for container token auth
 4. Set permissions for Podman volume bind mounts
 5. Enable linger for the current user (so rootless containers keep running after logout)
 6. Start all services with `podman-compose`
-7. Wait until the Pulp API is ready (checks every 20 seconds, up to ~30 minutes)
-8. Reset admin password (default: `pulp123`)
-9. Create non-admin user with username and password (default: `cephuser/cephuser123`)
+7. Wait until the Pulp API is ready (checks every 20 seconds, up to about 30 minutes)
+8. Reset the admin password (default: `pulp123`)
+9. Create a non-admin user (default: `cephuser` / `cephuser123`)
 
 ## What Gets Created
 

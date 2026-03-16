@@ -7,13 +7,13 @@ Helper scripts for configuring a Pulp client and managing Ceph-style repositorie
 - **Bash** – scripts require a Bash shell
 - **Python 3** with **pip** – for installing the Pulp CLI and plugins
 - **jq** – used by `publish-packages.sh` to parse JSON (install with `dnf install jq` or `apt install jq`)
-- **Pulp server** – a Pulp instance must already be running and reachable (see the deployment document [document](../deployment/README.md) for deployment with Podman)
+- **Pulp server** – a Pulp instance must already be running and reachable (see the [deployment README](../deployment/README.md) for deployment with Podman)
 
 ## Setup
 
 1. **Deploy Pulp** (if not already done):
 
-   From the deployment, use the deployment script as described in the document [document](../deployment/README.md), e.g.:
+   Use the deployment script as described in the [deployment README](../deployment/README.md), e.g.:
 
    ```bash
    cd deployment && ./deploy.sh /path/to/pulp-data
@@ -49,7 +49,7 @@ Sets up the Pulp CLI: installs `pulp-cli` and plugins if needed, creates client 
 
 | Requirement | Description |
 |-------------|-------------|
-| **Environment** | `PULP_SERVER_URL` (required). `PULP_ADMIN_PASSWORD` (optional, default: `pulp123`) for `--set-user-permissions`. |
+| **Environment** | `PULP_SERVER_URL` (required). For `--set-user-permissions`: `PULP_ADMIN_PASSWORD` (optional, default: `pulp123`), `PULP_ADMIN_USERNAME` (optional, default: `admin`). |
 | **Arguments** | `--username`, `--password` (required). `--overwrite`, `--set-user-permissions` (optional). |
 
 **Examples:**
@@ -64,15 +64,16 @@ Sets up the Pulp CLI: installs `pulp-cli` and plugins if needed, creates client 
 
 ### create-ceph-repos.sh
 
-Creates Pulp repositories for Ceph packages: one repository per combination of project, branch, distro, distro version, and architecture. Supports RPM (CentOS, Rocky) and Debian (Ubuntu) repos.
+Creates Pulp repositories for Ceph: (1) container image repositories with distributions, and (2) optionally package repositories (RPM/Deb) per combination of project, branch, distro, distro version, and architecture. Supports RPM (CentOS, Rocky), Debian (Ubuntu), and container image repos.
 
 | Option | Description |
 |--------|-------------|
 | `--distro LIST` | Comma-separated distros (e.g. `ubuntu,centos`). Omit for all. |
 | `--branches LIST` | Comma-separated Ceph branches (e.g. `reef,squid`). Omit for all. |
 | `--arch LIST` | Comma-separated architectures (e.g. `x86_64,aarch64`). Omit for all. |
+| `--container-repositories LIST` | Comma-separated container image repositories (e.g. `ceph,ceph-ci`). Omit for all. |
 
-**Supported:** distros `ubuntu` (jammy, noble), `centos` (8, 9), `rocky` (10); architectures `noarch`, `x86_64`, `aarch64`; branches `main`, `reef`, `squid`, `tentacle`. Repo names follow: `{PROJECT}-{branch}-{distro}-{distro_version}-{arch}`. `PROJECT` defaults to `ceph` (override via environment).
+**Supported:** distros `ubuntu` (jammy, noble), `centos` (8, 9), `rocky` (10); architectures `noarch`, `x86_64`, `aarch64`; branches `main`, `reef`, `squid`, `tentacle`; container repositories `ceph`, `ceph-ci`. Package repo names follow: `{PROJECT}-{branch}-{distro}-{distro_version}-{arch}`. Container repos use the given name and a distribution with the same base path. `PROJECT` defaults to `ceph` (override via environment).
 
 **Examples:**
 
@@ -80,6 +81,8 @@ Creates Pulp repositories for Ceph packages: one repository per combination of p
 ./create-ceph-repos.sh --help
 ./create-ceph-repos.sh
 ./create-ceph-repos.sh --distro ubuntu,centos --branches reef --arch x86_64,aarch64
+./create-ceph-repos.sh --container-repositories ceph,ceph-ci
+./create-ceph-repos.sh --distro ubuntu,centos --branches reef --arch x86_64,aarch64 --container-repositories ceph,ceph-ci
 ```
 
 **Prerequisite:** Run `configure-client.sh` first so `pulp` is configured and the user has permission to create repositories.
@@ -113,17 +116,47 @@ Repositories must already exist (e.g. created with `create-ceph-repos.sh`). Dist
 
 **Prerequisites:** `jq` installed; `configure-client.sh` run; repositories created (e.g. via `create-ceph-repos.sh`).
 
+---
+
+### publish-image.sh
+
+Publishes one or more local container images to a registry (e.g. a Pulp container registry) by tagging and pushing with Podman, then creates and pushes a multi-architecture manifest list for the tag. Optionally logs in first using `--username` and `--password`.
+
+| Argument / Option | Description |
+|-------------------|-------------|
+| `image` or `--image LIST` | Local image name (positional) or comma-separated list of images (for multi-arch manifest). |
+| `--registry` | Registry URL (required). |
+| `--base-path` | Base path in the registry (required). |
+| `--tag` | Tag name for the image (required). |
+| `--username` | Registry username for login (optional). |
+| `--password` | Registry password for login (optional). |
+| `--tls-verify` | Enable TLS verification for the push (optional flag; default behavior when omitted depends on Podman). |
+
+**Environment:** `PROJECT` (default: `ceph`).
+
+**Examples:**
+
+```bash
+./publish-image.sh my-image --registry https://registry.example.com --base-path my-base-path --tag v1.0.0 --username user --password secret
+./publish-image.sh --image img-amd64,img-arm64 --registry https://registry.example.com --base-path repos/ceph --tag reef-abc123 --tls-verify
+./publish-image.sh --help
+```
+
+**Prerequisites:** Podman installed; registry must exist and be reachable. Use `--username` and `--password` for authenticated registries.
+
 ## Typical workflow
 
 1. Deploy Pulp and note the API URL (see main [README](../README.md)).
 2. Run `configure-client.sh` with `PULP_SERVER_URL` and user credentials; use `--set-user-permissions` if the user should create repos and publish.
-3. Run `create-ceph-repos.sh` (with optional `--distro`, `--branches`, `--arch`) to create the needed repositories.
+3. Run `create-ceph-repos.sh` (with optional `--distro`, `--branches`, `--arch`, `--container-repositories`) to create the needed package and/or container image repositories.
 4. Run `publish-packages.sh` with the package path and `--branch`, `--sha1`, `--distro`, `--distro-version`, `--arch` to upload and publish packages.
+5. Run `publish-image.sh` with a local image (or `--image` and a comma-separated list for multi-arch), `--registry`, `--base-path`, and `--tag` to push container images and a manifest list; use `--username` and `--password` for authenticated registries.
 
 ## Environment variables (summary)
 
 | Variable | Used by | Default | Description |
 |----------|---------|---------|-------------|
-| `PULP_SERVER_URL` | configure-client.sh | (required) | Pulp API base URL, e.g. `http://host:8080/pulp/` |
+| `PULP_SERVER_URL` | configure-client.sh | (required) | Pulp API base URL, e.g. `http://host:8080` |
+| `PULP_ADMIN_USERNAME` | configure-client.sh | `admin` | Admin username for role assignment |
 | `PULP_ADMIN_PASSWORD` | configure-client.sh | `pulp123` | Admin password for role assignment |
-| `PROJECT` | create-ceph-repos.sh, publish-packages.sh | `ceph` | Project name in repository and path names |
+| `PROJECT` | create-ceph-repos.sh, publish-packages.sh, publish-image.sh | `ceph` | Project name in repository and path names |

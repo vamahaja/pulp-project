@@ -18,10 +18,14 @@ ARCHITECTURES=(noarch x86_64 aarch64)
 # Supported ceph branches
 CEPH_BRANCHES=(main reef squid tentacle)
 
+# Container image repositories
+CONTAINER_IMAGE_REPOSITORIES=(ceph ceph-ci)
+
 # Parse user arguments
 USER_DISTROS=()
 USER_BRANCHES=()
 USER_ARCHITECTURES=()
+USER_CONTAINER_REPOSITORIES=()
 
 # Show help message
 show_help() {
@@ -32,23 +36,26 @@ Create Pulp repositories for Ceph packages. Omit options to create repos for all
 supported distros, branches.
 
 Options:
-    --distro LIST       Comma-separated distros (default: all)
-                        Supported: ${!DISTROS[*]}
+    --distro LIST                   Comma-separated distros (default: all)
+                                    Supported: ${!DISTROS[*]}
 
-    --branches LIST     Comma-separated Ceph branches (default: all)
-                        Supported: ${CEPH_BRANCHES[*]}
+    --branches LIST                 Comma-separated Ceph branches (default: all)
+                                    Supported: ${CEPH_BRANCHES[*]}
 
-    --arch LIST         Comma-separated architectures (default: all)
-                        Supported: ${ARCHITECTURES[*]}
+    --arch LIST                     Comma-separated architectures (default: all)
+                                    Supported: ${ARCHITECTURES[*]}
 
-    -h, --help          Show this help and exit
+    --container-repositories LIST   Comma-separated container image repositories (default: all)
+                                    Supported: ${CONTAINER_IMAGE_REPOSITORIES[*]}
+
+    -h, --help                      Show this help and exit
 
 Environment:
-    PROJECT             Project name for repo names (default: ceph)
+    PROJECT                         Project name for repo names (default: ceph)
 
 Examples:
     create-ceph-repos.sh --help
-    create-ceph-repos.sh --distro ubuntu,centos --branches reef --arch x86_64,aarch64
+    create-ceph-repos.sh --distro ubuntu,centos --branches reef --arch x86_64,aarch64 --container-repositories ceph,ceph-ci
 EOF
 }
 
@@ -71,6 +78,11 @@ parse_args() {
                 IFS=',' read -ra USER_ARCHITECTURES <<< "$2"
                 shift 2
                 ;;
+            --container-repositories)
+                [[ $# -lt 2 ]] && { echo "Error: --container-repositories requires a value" >&2; exit 1; }
+                IFS=',' read -ra USER_CONTAINER_REPOSITORIES <<< "$2"
+                shift 2
+                ;;
             -h|--help)
                 show_help
                 exit 0
@@ -85,7 +97,7 @@ parse_args() {
 
 # Validate user arguments against supported distros and branches.
 validate_user_args() {
-    local d b c
+    local a d b r
 
     validate_distro() {
         [[ -n "${DISTROS[$1]:-}" ]]
@@ -118,18 +130,32 @@ validate_user_args() {
         for x in "${ARCHITECTURES[@]}"; do [[ "$x" == "$1" ]] && return 0; done
         return 1
     }
-    for c in "${USER_ARCHITECTURES[@]:-}"; do
-        [[ -z "$c" ]] && continue
-        c="${c// /}"
-        if ! validate_architecture "$c"; then
-            echo "Error: unsupported architecture '$c'. Supported: ${ARCHITECTURES[*]}" >&2
+    for a in "${USER_ARCHITECTURES[@]:-}"; do
+        [[ -z "$a" ]] && continue
+        a="${a// /}"
+        if ! validate_architecture "$a"; then
+            echo "Error: unsupported architecture '$a'. Supported: ${ARCHITECTURES[*]}" >&2
+            exit 1
+        fi
+    done
+
+    validate_container_repository() {
+        local x
+        for x in "${CONTAINER_IMAGE_REPOSITORIES[@]}"; do [[ "$x" == "$1" ]] && return 0; done
+        return 1
+    }
+    for r in "${USER_CONTAINER_REPOSITORIES[@]:-}"; do
+        [[ -z "$r" ]] && continue
+        r="${r// /}"
+        if ! validate_container_repository "$r"; then
+            echo "Error: unsupported container repository '$r'. Supported: ${CONTAINER_IMAGE_REPOSITORIES[*]}" >&2
             exit 1
         fi
     done
 }
 
 # Resolve which distros and branches to use (default: all).
-resolve_distros_and_branches() {
+resolve_supported_params() {
     trim_and_filter() {
         local -n arr=$1
         local -n out=$2
@@ -156,6 +182,12 @@ resolve_distros_and_branches() {
     if [[ ${#USER_ARCHITECTURES[@]} -gt 0 ]]; then
         trim_and_filter USER_ARCHITECTURES ARCHITECTURES_TO_USE
         [[ ${#ARCHITECTURES_TO_USE[@]} -eq 0 ]] && ARCHITECTURES_TO_USE=("${ARCHITECTURES[@]}")
+    fi
+
+    CONTAINER_IMAGE_REPOSITORIES_TO_USE=("${CONTAINER_IMAGE_REPOSITORIES[@]}")
+    if [[ ${#USER_CONTAINER_REPOSITORIES[@]} -gt 0 ]]; then
+        trim_and_filter USER_CONTAINER_REPOSITORIES CONTAINER_IMAGE_REPOSITORIES_TO_USE
+        [[ ${#CONTAINER_IMAGE_REPOSITORIES_TO_USE[@]} -eq 0 ]] && CONTAINER_IMAGE_REPOSITORIES_TO_USE=("${CONTAINER_IMAGE_REPOSITORIES[@]}")
     fi
 }
 
@@ -189,10 +221,32 @@ create_ceph_repos() {
     done
 }
 
+# Create container image repositories
+create_container_image_repos() {
+    for repo in "${CONTAINER_IMAGE_REPOSITORIES_TO_USE[@]}"; do
+        echo "Creating container image repository ${repo} ..."
+
+        if ! pulp container repository create --name "${repo}"; then
+            echo "Error: failed to create container image repository ${repo}" >&2
+            exit 1
+        fi
+
+        if ! pulp container distribution create --name "${repo}-dist" \
+            --repository "${repo}" \
+            --base-path "${repo}"; then
+            echo "Error: failed to create container image distribution ${repo}-dist" >&2
+            exit 1
+        fi
+    done
+}
+
+# Parse and validate user arguments
 parse_args "$@"
-
 validate_user_args
+resolve_supported_params
 
-resolve_distros_and_branches
-
+# Create repositories
 create_ceph_repos
+
+# Create container image repositories
+create_container_image_repos
