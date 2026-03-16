@@ -1,102 +1,35 @@
-# Pulp Project Deployment
+# Pulp Project
 
-Deploy [Pulp](https://docs.pulpproject.org/) (content repository and distribution system) using Podman and podman-compose.
+Deploy and manage [Pulp](https://docs.pulpproject.org/) (content repository and distribution system) with Podman, and use helper scripts to configure clients and manage Ceph repositories (RPM and Debian) on a running Pulp server.
 
-## Prerequisites
+## Overview
 
-- **Podman** – container runtime
-- **podman-compose** – multi-container orchestration
+| Directory     | Description |
+|---------------|--------------|
+| **[deployment/](deployment/)** | Deploy Pulp with Podman and podman-compose: persistent data dirs, Nginx, PostgreSQL, Redis, Pulp API/content/worker. See [deployment/README.md](deployment/README.md) for prerequisites, quick start, and stack management. |
+| **[scripts/](scripts/)** | Configure the Pulp CLI, create Ceph repos, and publish packages. See [scripts/README.md](scripts/README.md) for setup and usage. |
 
-Install on Fedora/CentOS/Rocky:
+## Quick start
 
-```bash
-sudo dnf install podman podman-compose
-```
+1. **Deploy Pulp** (from the repo root):
 
-## Quick Start
+   ```bash
+   cd deployment && chmod +x ./deploy.sh && ./deploy.sh /opt/pulp-data
+   ```
 
-Run the deployment script with a base directory for persistent data:
+2. **Configure the client and create repos** (see [scripts/README.md](scripts/README.md)):
 
-```bash
-cd deployment && chmod +x ./deploy.sh
-```
+   ```bash
+   export PULP_SERVER_URL="http://<host>:8080"
+   chmod +x scripts/*.sh
+   ./scripts/configure-client.sh --username cephuser --password cephuser123 --set-user-permissions --overwrite
+   ./scripts/create-ceph-repos.sh   # optional: --distro, --branches, --arch
+   ```
 
-```bash
-./deploy.sh /path/to/your/pulp-data
-```
+3. **Publish packages** when needed:
 
-Example:
+   ```bash
+   ./scripts/publish-packages.sh /path/to/packages --branch main --sha1 <sha1> --distro centos --distro-version 9 --arch x86_64
+   ```
 
-```bash
-./deploy.sh /opt/pulp-data
-```
-
-The script will:
-
-1. Create the required directories under the path you provide
-2. Copy `config/nginx.conf` into the deployment directory
-3. Generate a symmetric key for database fields under `settings/certs/`
-4. Set permissions for Podman volume bind mounts
-5. Start all services with `podman-compose`
-6. Wait until the Pulp API is ready (checks every 20 seconds, up to ~30 minutes)
-7. Reset admin password (default: `pulp123`)
-8. Create non-admin user with username and password (default: `cephuser/cephuser123`)
-
-## What Gets Created
-
-Under your base directory (e.g. `/opt/pulp_data`), the script creates:
-
-| Directory     | Purpose                          |
-|---------------|----------------------------------|
-| `pgsql`       | PostgreSQL data                  |
-| `pulp_storage`| Pulp file storage                |
-| `settings`    | Pulp config and `certs/`         |
-| `redis_data`  | Redis persistence                |
-| `nginx_conf`  | Nginx config (copy of `nginx.conf`) |
-
-## Ports
-
-| Service       | Port  | Description                    |
-|---------------|-------|--------------------------------|
-| Pulp API      | 24817 | Direct API access              |
-| Pulp Content  | 24816 | Content service                |
-| Web (Nginx)   | 8080  | Reverse proxy (API + content)   |
-
-- **API (direct):** `http://<host>:24817/pulp/api/v3/`
-- **API (via Nginx):** `http://<host>:8080/pulp/api/`
-- **Content (via Nginx):** `http://<host>:8080/pulp/content/`
-- **Documentation (via Nginx):** `http://<host>:8080/pulp/api/v3/docs/`
-
-The script sets `PULP_API_URL` using the host’s first IP for health checks.
-
-## Configuration
-
-Defaults are set in `deploy.sh`; override any of these via environment variables (or, for the base directory, the first script argument) before running.
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PULP_DB_NAME` | `pulpdb` | PostgreSQL database name |
-| `PULP_DB_USER` | `pulp` | PostgreSQL user |
-| `PULP_DB_PASSWORD` | `pulp123` | PostgreSQL password |
-| `PULP_ADMIN_PASSWORD` | `pulp123` | Pulp admin (reset after deploy) |
-| `PULP_USERNAME` | `cephuser` | Pulp API user created by the script |
-| `PULP_PASSWORD` | `cephuser123` | Password for `PULP_USERNAME` |
-| Base directory (1st arg) | `./pulp-data` | Data directory; pass as first argument or leave unset to use default |
-
-## Managing the Stack
-
-From the project directory (where `podman-compose.yaml` lives):
-
-```bash
-# Use the same base directory as deploy.sh
-export PULP_BASE_DIR=/path/to/your/pulp_data
-
-# Stop services
-podman-compose -f ./podman-compose.yaml down
-
-# Start again (after initial deploy)
-podman-compose -f ./podman-compose.yaml up -d
-
-# View logs
-podman-compose -f ./podman-compose.yaml logs -f
-```
+Default credentials after deploy: admin `pulp123`, user `cephuser` / `cephuser123`. API and docs: `http://<host>:8080/pulp/api/` and `http://<host>:8080/pulp/api/v3/docs/`.
