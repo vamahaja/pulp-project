@@ -157,7 +157,7 @@ process_packages() {
 
         local publication_href
         publication_href=$(pulp "$pkg_type" publication create --repository "$repo_name" | jq -r '.pulp_href')
-        pulp "$pkg_type" distribution create --name "$SHA1-$pkg_type" \
+        pulp "$pkg_type" distribution create --name "$SHA1-$ARCH-$pkg_type" \
             --base-path "$BASE_PATH" --publication "$publication_href"
     fi
 }
