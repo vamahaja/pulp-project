@@ -12,8 +12,11 @@ DISTROS[ubuntu]="jammy noble"
 DISTROS[centos]="8 9"
 DISTROS[rocky]="10"
 
-# Supported architecture
-ARCHITECTURES=(noarch x86_64 aarch64)
+# Supported architectures per distro
+declare -A ARCHITECTURES
+ARCHITECTURES[ubuntu]="x86_64 arm64"
+ARCHITECTURES[centos]="noarch x86_64 arm64 SRPMS"
+ARCHITECTURES[rocky]="noarch x86_64 arm64 SRPMS"
 
 # Supported ceph branches
 CEPH_BRANCHES=(main reef squid tentacle)
@@ -42,8 +45,10 @@ Options:
     --branches LIST                 Comma-separated Ceph branches (default: all)
                                     Supported: ${CEPH_BRANCHES[*]}
 
-    --arch LIST                     Comma-separated architectures (default: all)
-                                    Supported: ${ARCHITECTURES[*]}
+    --arch LIST                     Comma-separated architectures (default: all per distro)
+                                    ubuntu: ${ARCHITECTURES[ubuntu]}
+                                    centos: ${ARCHITECTURES[centos]}
+                                    rocky:  ${ARCHITECTURES[rocky]}
 
     --container-repositories LIST   Comma-separated container image repositories (default: all)
                                     Supported: ${CONTAINER_IMAGE_REPOSITORIES[*]}
@@ -55,7 +60,7 @@ Environment:
 
 Examples:
     create-ceph-repos.sh --help
-    create-ceph-repos.sh --distro ubuntu,centos --branches reef --arch x86_64,aarch64 --container-repositories ceph,ceph-ci
+    create-ceph-repos.sh --distro ubuntu,centos --branches reef --arch x86_64
 EOF
 }
 
@@ -125,16 +130,20 @@ validate_user_args() {
         fi
     done
 
+    # Validate arch against all distro-specific architecture lists
     validate_architecture() {
-        local x
-        for x in "${ARCHITECTURES[@]}"; do [[ "$x" == "$1" ]] && return 0; done
+        local arch="$1" distro x
+        for distro in "${USER_DISTROS[@]:-}" "${!DISTROS[@]}"; do
+            [[ -z "$distro" ]] && continue
+            for x in ${ARCHITECTURES[$distro]:-}; do [[ "$x" == "$arch" ]] && return 0; done
+        done
         return 1
     }
     for a in "${USER_ARCHITECTURES[@]:-}"; do
         [[ -z "$a" ]] && continue
         a="${a// /}"
         if ! validate_architecture "$a"; then
-            echo "Error: unsupported architecture '$a'. Supported: ${ARCHITECTURES[*]}" >&2
+            echo "Error: unsupported architecture '$a'" >&2
             exit 1
         fi
     done
@@ -178,10 +187,12 @@ resolve_supported_params() {
         [[ ${#BRANCHES_TO_USE[@]} -eq 0 ]] && BRANCHES_TO_USE=("${CEPH_BRANCHES[@]}")
     fi
 
-    ARCHITECTURES_TO_USE=("${ARCHITECTURES[@]}")
+    USER_ARCH_FILTER=()
     if [[ ${#USER_ARCHITECTURES[@]} -gt 0 ]]; then
-        trim_and_filter USER_ARCHITECTURES ARCHITECTURES_TO_USE
-        [[ ${#ARCHITECTURES_TO_USE[@]} -eq 0 ]] && ARCHITECTURES_TO_USE=("${ARCHITECTURES[@]}")
+        for x in "${USER_ARCHITECTURES[@]}"; do
+            x="${x// /}"
+            [[ -n "$x" ]] && USER_ARCH_FILTER+=("$x")
+        done
     fi
 
     CONTAINER_IMAGE_REPOSITORIES_TO_USE=("${CONTAINER_IMAGE_REPOSITORIES[@]}")
@@ -206,9 +217,21 @@ create_ceph_repos() {
                 repo_type="deb"
             fi
 
-            # Create repository for each branch, distro version and architecture
+            # Resolve architectures for this distro (apply user filter if provided)
+            local distro_archs=()
+            for arch in ${ARCHITECTURES[$distro]}; do
+                if [[ ${#USER_ARCH_FILTER[@]} -gt 0 ]]; then
+                    local match=false
+                    for f in "${USER_ARCH_FILTER[@]}"; do [[ "$f" == "$arch" ]] && match=true; done
+                    [[ "$match" == "false" ]] && continue
+                fi
+                distro_archs+=("$arch")
+            done
+            [[ ${#distro_archs[@]} -eq 0 ]] && distro_archs=(${ARCHITECTURES[$distro]})
+
+            # Create one repository per distro version and architecture
             for distro_version in ${DISTROS[$distro]}; do
-                for architecture in "${ARCHITECTURES_TO_USE[@]}"; do
+                for architecture in "${distro_archs[@]}"; do
                     repo_name="${PROJECT}-${branch}-${distro}-${distro_version}-${architecture}"
                     echo "Creating ${repo_type} repository ${repo_name} ..."
                     if ! pulp "${repo_type}" repository create --name "${repo_name}"; then
