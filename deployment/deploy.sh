@@ -16,9 +16,9 @@ export PULP_USERNAME=${PULP_USERNAME:-"cephuser"}
 export PULP_PASSWORD=${PULP_PASSWORD:-"cephuser123"}
 
 # Set PULP_API_URL using host IP (fallback to localhost)
-PULP_IP=$(hostname -I | awk '{print $1}')
-export PULP_API_URL="http://${PULP_IP}:24817"
-export PULP_SERVER_URL="http://${PULP_IP}:8080"
+export PULP_SERVER_IP=$(hostname -I | awk '{print $1}')
+export PULP_API_URL="http://${PULP_SERVER_IP}:24817"
+export PULP_SERVER_URL="http://${PULP_SERVER_IP}:8080"
 
 # Set default pulp directory if not provided
 PULP_BASE_DIR="./pulp-data"
@@ -40,8 +40,12 @@ echo "Copy nginx.conf to $PULP_BASE_DIR ..."
 cp config/nginx.conf "${PULP_BASE_DIR}/nginx_conf/nginx.conf"
 
 # Generate SSL certificate and key
+echo "Generating SSL certificate and key in $PULP_BASE_DIR/settings/certs ..."
 mkdir -p ${PULP_BASE_DIR}/settings/certs
 openssl rand -base64 32 > ${PULP_BASE_DIR}/settings/certs/database_fields.symmetric.key
+openssl genrsa -out ${PULP_BASE_DIR}/settings/certs/container_auth_private_key.pem 4096
+openssl rsa -in ${PULP_BASE_DIR}/settings/certs/container_auth_private_key.pem \
+            -pubout -out ${PULP_BASE_DIR}/settings/certs/container_auth_public_key.pem
 
 # Set execute permissions for base directory
 podman unshare chmod -R 755 ${PULP_BASE_DIR}
@@ -54,7 +58,7 @@ loginctl enable-linger $(id -u)
 echo "Deploy pulp project using podman compose ..."
 podman-compose -f ./podman-compose.yaml up -d
 
-# Validate pulp_api status for up to 10 minutes, checking every 20 seconds
+# Validate pulp_api status for up to ~30 minutes, checking every 20 seconds
 echo "Validating pulp_api status (max 30 minutes, interval 20s) ..."
 max_attempts=91
 interval=20
@@ -66,7 +70,7 @@ while [ "$attempt" -le "$max_attempts" ]; do
     fi
 
     if [ "$attempt" -eq "$max_attempts" ]; then
-        echo "Error: pulp_api did not become ready within 10 minutes."
+        echo "Error: pulp_api did not become ready within 30 minutes."
         exit 1
     fi
     echo "  Attempt $attempt/$max_attempts: pulp_api not ready, retrying in ${interval}s ..."

@@ -23,13 +23,14 @@ Deploy and manage [Pulp](https://docs.pulpproject.org/) (content repository and 
    export PULP_SERVER_URL="http://<host>:8080"
    chmod +x scripts/*.sh
    ./scripts/configure-client.sh --username cephuser --password cephuser123 --set-user-permissions --overwrite
-   ./scripts/create-ceph-repos.sh   # optional: --distro, --branches, --arch
+   ./scripts/create-ceph-repos.sh   # optional: --distro, --branches, --arch, --container-repositories
    ```
 
-3. **Publish packages** when needed:
+3. **Publish packages or container images** when needed:
 
    ```bash
    ./scripts/publish-packages.sh /path/to/packages --branch main --sha1 <sha1> --distro centos --distro-version 9 --arch x86_64
+   ./scripts/publish-image.sh <image> --registry http://<host>:8080 --base-path ceph --tag main-abc123 --username cephuser --password cephuser123
    ```
 
 Default credentials after deploy: admin `pulp123`, user `cephuser` / `cephuser123`. API and docs: `http://<host>:8080/pulp/api/` and `http://<host>:8080/pulp/api/v3/docs/`.

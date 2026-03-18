@@ -10,6 +10,10 @@ x-pulp-common: &pulp-common
     - PULP_DATABASES__default__PASSWORD=${PULP_DB_PASSWORD}
     - PULP_DATABASES__default__HOST=postgres
     - PULP_REDIS_URL=redis://redis:6379/1
+    - PULP_TOKEN_SERVER=http://${PULP_SERVER_IP}:8080/token/
+    - PULP_TOKEN_SIGNATURE_ALGORITHM=RS256
+    - PULP_PUBLIC_KEY_PATH=/etc/pulp/certs/container_auth_public_key.pem
+    - PULP_PRIVATE_KEY_PATH=/etc/pulp/certs/container_auth_private_key.pem
   volumes:
     - pulp_settings:/etc/pulp
     - pulp_storage:/var/lib/pulp
