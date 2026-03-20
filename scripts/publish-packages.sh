@@ -153,7 +153,7 @@ process_packages() {
         echo "Creating publication and distribution for repository $repo_name ..."
 
         local dist_base_path="${BASE_PATH}/${ARCH}"
-        local dist_name="$SHA1-$ARCH-$pkg_type"
+        local dist_name="$SHA1-$DISTRO-$DISTRO_VERSION-$ARCH-$pkg_type"
 
         local publication_href
         publication_href=$(pulp "$pkg_type" publication create --repository "$repo_name" | jq -r '.pulp_href')
