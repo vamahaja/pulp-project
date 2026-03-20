@@ -15,8 +15,8 @@ DISTROS[rocky]="10"
 # Supported architectures per distro
 declare -A ARCHITECTURES
 ARCHITECTURES[ubuntu]="x86_64 arm64"
-ARCHITECTURES[centos]="noarch x86_64 arm64 SRPMS"
-ARCHITECTURES[rocky]="noarch x86_64 arm64 SRPMS"
+ARCHITECTURES[centos]="noarch x86_64 aarch64 SRPMS"
+ARCHITECTURES[rocky]="noarch x86_64 aarch64 SRPMS"
 
 # Supported ceph branches
 CEPH_BRANCHES=(main reef squid tentacle)
