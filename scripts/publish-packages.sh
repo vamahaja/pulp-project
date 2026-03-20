@@ -125,41 +125,53 @@ check_if_repo_exists() {
 process_packages() {
     local pkg_type="$1"
     local ext="$pkg_type"
-    local repo_name="$PROJECT-$BRANCH-$DISTRO-$DISTRO_VERSION-$ARCH"
+    local repo_name
     local file
     local uploaded=0
 
-    # Check if there are any packages to upload
-    for file in "$FILE_PATH"/*."$ext"; do
-        [ -f "$file" ] || continue
-        break
-    done
+    repo_name="$PROJECT-$BRANCH-$DISTRO-$DISTRO_VERSION-$ARCH"
 
     # Check if there are any packages to upload
-    [ -f "$file" ] || return 0
+    if ! find "$FILE_PATH" -name "*.$ext" -type f -print -quit | grep -q .; then
+        return 0
+    fi
 
     # Check if the repository exists
     check_if_repo_exists "$repo_name" "$pkg_type"
 
-    # Upload packages to the repository
-    for file in "$FILE_PATH"/*."$ext"; do
+    # Upload packages to the repository (recursive find for nested layouts like pool/)
+    while IFS= read -r -d '' file; do
         [ -f "$file" ] || continue
-
         echo "Uploading package $file to repository $repo_name"
         pulp "$pkg_type" content -t package upload --repository "$repo_name" --file "$file"
         uploaded=$((uploaded + 1))
-    done
+    done < <(find "$FILE_PATH" -name "*.$ext" -type f -print0)
     echo "Uploaded $uploaded packages to repository $repo_name ..."
 
     # Create publication and distribution if any packages were uploaded
     if [ "$uploaded" -gt 0 ]; then
         echo "Creating publication and distribution for repository $repo_name ..."
 
+        local dist_base_path="${BASE_PATH}/${ARCH}"
+        local dist_name="$SHA1-$ARCH-$pkg_type"
+
         local publication_href
         publication_href=$(pulp "$pkg_type" publication create --repository "$repo_name" | jq -r '.pulp_href')
-        pulp "$pkg_type" distribution create --name "$SHA1-$ARCH-$pkg_type" \
-            --base-path "$BASE_PATH" --publication "$publication_href"
+        pulp "$pkg_type" distribution create --name "$dist_name" \
+            --base-path "$dist_base_path" --publication "$publication_href"
     fi
+}
+
+# Determine package type based on distro
+resolve_pkg_type() {
+    case "$DISTRO" in
+        ubuntu)        echo "deb" ;;
+        centos|rocky)  echo "rpm" ;;
+        *)
+            echo "Error: unsupported distro '$DISTRO'" >&2
+            exit 1
+            ;;
+    esac
 }
 
 # Parse and validate
@@ -167,9 +179,9 @@ parse_arguments "$@"
 validate_params
 
 # Construct Pulp identifiers like Chacra paths
+PKG_TYPE=$(resolve_pkg_type)
 BASE_PATH="repos/${PROJECT}/${BRANCH}/${SHA1}/${DISTRO}/${DISTRO_VERSION}"
-BASE_PATH="${BASE_PATH}/flavors/${FLAVOR}/${ARCH}"
+BASE_PATH="${BASE_PATH}/flavors/${FLAVOR}"
 
-# Process rpm and deb packages
-process_packages "rpm"
-process_packages "deb"
+# Process packages
+process_packages "$PKG_TYPE"
