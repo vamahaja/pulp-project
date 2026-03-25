@@ -96,18 +96,25 @@ configure_client() {
 }
 
 install_client() {
+    local pip_args=()
+    if pip install --dry-run --break-system-packages pip &>/dev/null 2>&1; then
+        pip_args+=(--break-system-packages)
+    fi
+
     # Install pulp client
     if ! command -v pulp &>/dev/null; then
         echo "Installing pulp client ..."
-        pip install pulp-cli
+        pip install "${pip_args[@]}" pulp-cli
     else
         echo "Pulp client is already installed."
     fi
 
-    # Install pulp client plugins
-    if pulp --version &>/dev/null; then
-        echo "Installing pulp client plugins ..."
-        pip install pulp-rpm pulp-deb pulp-cli-deb
+    # Install pulp client deb plugin
+    if ! pip show pulp-cli-deb &>/dev/null; then
+        echo "Installing pulp client deb plugin ..."
+        pip install "${pip_args[@]}" pulp-cli-deb
+    else
+        echo "Pulp client deb plugin is already installed."
     fi
 }
 
