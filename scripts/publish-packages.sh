@@ -21,10 +21,11 @@ Required:
     --distro <distro>        Distribution name
     --distro-version <ver>   Distribution version
     --arch <arch>            Architecture
+    --version <version>      Package version string
 
 Optional:
     --project <project>      Project name (default: ceph)
-    --flavor <flavor>        Flavor (default: default)
+    --flavor <flavor>        Flavor label value (default: default)
 EOF
 }
 
@@ -58,6 +59,10 @@ parse_arguments() {
                 ;;
             --arch)
                 ARCH="$2"
+                shift 2
+                ;;
+            --version)
+                VERSION="$2"
                 shift 2
                 ;;
             -h|--help)
@@ -107,6 +112,32 @@ validate_params() {
         echo "Error: --arch is required. Use --help for usage."
         exit 1
     fi
+
+    if [ -z "${VERSION:-}" ]; then
+        echo "Error: --version is required. Use --help for usage."
+        exit 1
+    fi
+}
+
+# Set pulp_labels on a deb/rpm distribution
+# pulp-cli-rpm uses --distribution while pulp-cli-deb uses --name for label lookups.
+set_distribution_labels() {
+    local pkg_type="$1" dist_name="$2"
+    local lookup_flag="--name"
+    if [ "$pkg_type" = "rpm" ]; then
+        lookup_flag="--distribution"
+    fi
+
+    pulp "$pkg_type" distribution label set "$lookup_flag" "${dist_name}" --key ref --value "${BRANCH}"
+    pulp "$pkg_type" distribution label set "$lookup_flag" "${dist_name}" --key arch --value "${ARCH}"
+    pulp "$pkg_type" distribution label set "$lookup_flag" "${dist_name}" --key sha1 --value "${SHA1}"
+    pulp "$pkg_type" distribution label set "$lookup_flag" "${dist_name}" --key distro --value "${DISTRO}"
+    pulp "$pkg_type" distribution label set "$lookup_flag" "${dist_name}" --key flavors --value "${FLAVOR}"
+    pulp "$pkg_type" distribution label set "$lookup_flag" "${dist_name}" --key project --value "${PROJECT}"
+    pulp "$pkg_type" distribution label set "$lookup_flag" "${dist_name}" --key distro_version --value "${DISTRO_VERSION}"
+    pulp "$pkg_type" distribution label set "$lookup_flag" "${dist_name}" --key version --value "${VERSION}"
+
+    echo "Successfully applied labels on distribution ${dist_name}"
 }
 
 # Validate that a Pulp repository exists
@@ -159,6 +190,8 @@ process_packages() {
         publication_href=$(pulp "$pkg_type" publication create --repository "$repo_name" | jq -r '.pulp_href')
         pulp "$pkg_type" distribution create --name "$dist_name" \
             --base-path "$dist_base_path" --publication "$publication_href"
+        echo "Setting labels on distribution ${dist_name} ..."
+        set_distribution_labels "$pkg_type" "$dist_name"
     fi
 }
 
