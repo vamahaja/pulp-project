@@ -188,8 +188,15 @@ process_packages() {
 
         local publication_href
         publication_href=$(pulp "$pkg_type" publication create --repository "$repo_name" | jq -r '.pulp_href')
-        pulp "$pkg_type" distribution create --name "$dist_name" \
-            --base-path "$dist_base_path" --publication "$publication_href"
+
+        if pulp "$pkg_type" distribution show --name "$dist_name" &>/dev/null; then
+            echo "Distribution ${dist_name} already exists, updating publication ..."
+            pulp "$pkg_type" distribution update --name "$dist_name" \
+                --publication "$publication_href"
+        else
+            pulp "$pkg_type" distribution create --name "$dist_name" \
+                --base-path "$dist_base_path" --publication "$publication_href"
+        fi
         echo "Setting labels on distribution ${dist_name} ..."
         set_distribution_labels "$pkg_type" "$dist_name"
     fi
