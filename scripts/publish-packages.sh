@@ -156,50 +156,119 @@ check_if_repo_exists() {
 process_packages() {
     local pkg_type="$1"
     local ext="$pkg_type"
-    local repo_name
-    local file
-    local uploaded=0
-
-    repo_name="$PROJECT-$BRANCH-$DISTRO-$DISTRO_VERSION-$ARCH"
+    local repo_name="$PROJECT-$BRANCH-$DISTRO-$DISTRO_VERSION-$ARCH"
 
     # Check if there are any packages to upload
     if ! find "$FILE_PATH" -name "*.$ext" -type f -print -quit | grep -q .; then
         return 0
     fi
 
-    # Check if the repository exists
     check_if_repo_exists "$repo_name" "$pkg_type"
 
-    # Upload packages to the repository (recursive find for nested layouts like pool/)
+    # Record pre-upload latest version for content diff
+    local pre_version_href
+    pre_version_href=$(pulp "$pkg_type" repository show --name "$repo_name" \
+        | jq -r '.latest_version_href')
+    echo "Repository $repo_name current latest version: $pre_version_href"
+
+    # Upload packages to repository
+    local upload_count=0
     while IFS= read -r -d '' file; do
         [ -f "$file" ] || continue
-        echo "Uploading package $file to repository $repo_name"
-        pulp "$pkg_type" content -t package upload --repository "$repo_name" --file "$file"
-        uploaded=$((uploaded + 1))
+        echo "Uploading package $(basename "$file") ..."
+        pulp "$pkg_type" content -t package upload \
+            --repository "$repo_name" --file "$file" > /dev/null
+        upload_count=$((upload_count + 1))
     done < <(find "$FILE_PATH" -name "*.$ext" -type f -print0)
-    echo "Uploaded $uploaded packages to repository $repo_name ..."
 
-    # Create publication and distribution if any packages were uploaded
-    if [ "$uploaded" -gt 0 ]; then
-        echo "Creating publication and distribution for repository $repo_name ..."
-
-        local dist_base_path="${BASE_PATH}/${ARCH}"
-        local dist_name="$SHA1-$DISTRO-$DISTRO_VERSION-$ARCH-$pkg_type"
-
-        local publication_href
-        publication_href=$(pulp "$pkg_type" publication create --repository "$repo_name" | jq -r '.pulp_href')
-
-        if pulp "$pkg_type" distribution show --name "$dist_name" &>/dev/null; then
-            echo "Distribution ${dist_name} already exists, updating publication ..."
-            pulp "$pkg_type" distribution update --name "$dist_name" \
-                --publication "$publication_href"
-        else
-            pulp "$pkg_type" distribution create --name "$dist_name" \
-                --base-path "$dist_base_path" --publication "$publication_href"
-        fi
-        echo "Setting labels on distribution ${dist_name} ..."
-        set_distribution_labels "$pkg_type" "$dist_name"
+    if [ "$upload_count" -eq 0 ]; then
+        return 0
     fi
+    echo "Uploaded $upload_count packages to repository $repo_name"
+
+    # Get post-upload latest version
+    local post_version_href
+    post_version_href=$(pulp "$pkg_type" repository show --name "$repo_name" \
+        | jq -r '.latest_version_href')
+    echo "Post-upload latest version: $post_version_href"
+
+    # Collect content HREFs added by this build via set difference (post - pre)
+    local post_hrefs pre_hrefs new_hrefs
+    post_hrefs=$(pulp "$pkg_type" content -t package list \
+        --repository-version "$post_version_href" --limit 10000 \
+        | jq -r '.[].pulp_href' | sort)
+
+    pre_hrefs=""
+    if [ "$pre_version_href" != "null" ] && [ -n "$pre_version_href" ]; then
+        local pre_version_number
+        pre_version_number=$(echo "$pre_version_href" \
+            | sed 's|.*/versions/\([0-9]*\)/.*|\1|')
+        if [[ "$pre_version_number" =~ ^[0-9]+$ ]] && [ "$pre_version_number" -gt 0 ]; then
+            pre_hrefs=$(pulp "$pkg_type" content -t package list \
+                --repository-version "$pre_version_href" --limit 10000 \
+                | jq -r '.[].pulp_href' | sort)
+        fi
+    fi
+
+    if [ -n "$pre_hrefs" ]; then
+        new_hrefs=$(comm -23 <(echo "$post_hrefs") <(echo "$pre_hrefs"))
+    else
+        new_hrefs="$post_hrefs"
+    fi
+
+    local -a content_hrefs=()
+    while IFS= read -r href; do
+        [ -n "$href" ] && content_hrefs+=("$href")
+    done <<< "$new_hrefs"
+
+    if [ ${#content_hrefs[@]} -eq 0 ]; then
+        echo "No new content detected after upload"
+        return 0
+    fi
+    echo "Identified ${#content_hrefs[@]} new content units for this build"
+
+    # Build JSON array of content HREFs for the Pulp API
+    local add_content_json
+    add_content_json=$(printf '%s\n' "${content_hrefs[@]}" \
+        | jq -R '.' | jq -s '[.[] | {pulp_href: .}]')
+
+    # Create isolated repo version from empty base with only this build's content
+    echo "Creating isolated repo version with ${#content_hrefs[@]} packages ..."
+    pulp "$pkg_type" repository content modify \
+        --repository "$repo_name" \
+        --base-version 0 \
+        --add-content "$add_content_json"
+
+    local version_href version_number
+    version_href=$(pulp "$pkg_type" repository show --name "$repo_name" \
+        | jq -r '.latest_version_href')
+    version_number=$(echo "$version_href" | sed 's|.*/versions/\([0-9]*\)/.*|\1|')
+    echo "Created repository version ${version_number} with ${#content_hrefs[@]} packages"
+
+    # Create publication for that specific version
+    echo "Creating publication and distribution for repository $repo_name ..."
+    local dist_base_path="${BASE_PATH}/${ARCH}"
+    local dist_name="$SHA1-$DISTRO-$DISTRO_VERSION-$ARCH-$pkg_type"
+    local publication_href
+    local -a pub_args=(--repository "$repo_name" --version "$version_number")
+    if [ "$pkg_type" = "deb" ]; then
+        pub_args+=(--simple --no-structured)
+    fi
+    publication_href=$(pulp "$pkg_type" publication create \
+        "${pub_args[@]}" | jq -r '.pulp_href')
+
+    # Create or update distribution
+    if pulp "$pkg_type" distribution show --name "$dist_name" &>/dev/null; then
+        echo "Distribution ${dist_name} already exists, updating ..."
+        pulp "$pkg_type" distribution update --name "$dist_name" \
+            --publication "$publication_href"
+    else
+        pulp "$pkg_type" distribution create --name "$dist_name" \
+            --base-path "$dist_base_path" --publication "$publication_href"
+    fi
+
+    echo "Setting labels on distribution ${dist_name} ..."
+    set_distribution_labels "$pkg_type" "$dist_name"
 }
 
 # Determine package type based on distro
