@@ -6,7 +6,7 @@ Deploy and manage [Pulp](https://docs.pulpproject.org/) (content repository and 
 
 | Directory     | Description |
 |---------------|--------------|
-| **[deployment/](deployment/)** | Deploy Pulp with Podman and podman-compose: persistent data dirs, Nginx, PostgreSQL, Redis, Pulp API/content/worker. See [deployment/README.md](deployment/README.md) for prerequisites, quick start, and stack management. |
+| **[deployment/](deployment/)** | Deploy Pulp with Podman and podman-compose: persistent data dirs, Nginx, PostgreSQL, Redis, Pulp API/content/worker. See [deployment/README.md](deployment/README.md) for an overview; full steps in [deployment/podman/README.md](deployment/podman/README.md). |
 | **[scripts/](scripts/)** | Configure the Pulp CLI, create Ceph repos, and publish packages. See [scripts/README.md](scripts/README.md) for setup and usage. |
 
 ## Quick start
@@ -14,7 +14,7 @@ Deploy and manage [Pulp](https://docs.pulpproject.org/) (content repository and 
 1. **Deploy Pulp** (from the repo root):
 
    ```bash
-   cd deployment && chmod +x ./deploy.sh && ./deploy.sh /opt/pulp-data
+   cd deployment/podman && chmod +x ./deploy.sh && ./deploy.sh /opt/pulp-data
    ```
 
 2. **Configure the client and create repos** (see [scripts/README.md](scripts/README.md)):
