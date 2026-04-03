@@ -16,7 +16,7 @@ Helper scripts for configuring a Pulp client and managing Ceph-style repositorie
    Use the deployment script as described in the [deployment README](../deployment/README.md), e.g.:
 
    ```bash
-   cd deployment && ./deploy.sh /path/to/pulp-data
+   cd deployment/podman && ./deploy.sh /path/to/pulp-data
    ```
 
 2. **Make scripts executable**:
