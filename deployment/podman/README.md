@@ -1,23 +1,19 @@
-# Pulp Project Deployment
+# Pulp Project Deployment using Podmand
 
-Parent overview: [../README.md](../README.md).
-
-Deploy [Pulp](https://docs.pulpproject.org/) (content repository and distribution system) using Podman and podman-compose.
+Deploy [Pulp](https://docs.pulpproject.org/) using Podman and podman-compose.
 
 ## Prerequisites
 
 - **Podman** – container runtime
 - **podman-compose** – multi-container orchestration
 
-Install on Fedora/CentOS/Rocky:
+Install on `Fedora`/`CentOS`/`Rocky`:
 
 ```bash
 sudo dnf install podman podman-compose
 ```
 
-Run `deploy.sh` as the **same (rootless) user** that will own the containers; that user must be able to run `podman` and `loginctl enable-linger` (typically from a logged-in session).
-
-**Directory layout:** `deployment/podman` contains `deploy.sh`, `podman-compose.yaml`, `config/nginx.conf`. All deployment and management commands below are run from the **`deployment/podman`** directory.
+**Directory layout:** `deployment/podman` contains `deploy.sh`, `podman-compose.yaml`, `config/nginx.conf`.
 
 ## Quick Start
 
@@ -36,18 +32,6 @@ Example:
 ```bash
 ./deploy.sh /opt/pulp-data
 ```
-
-The script will:
-
-1. Create the required directories under the path you provide
-2. Copy `config/nginx.conf` into the base data directory at `nginx_conf/nginx.conf`
-3. Generate under `settings/certs/`: a symmetric key for database fields, and a key pair for container token auth
-4. Set permissions for Podman volume bind mounts
-5. Enable linger for the current user (so rootless containers keep running after logout)
-6. Start all services with `podman-compose`
-7. Wait until the Pulp API is ready (checks every 20 seconds, up to about 30 minutes)
-8. Reset the admin password (default: `pulp123`)
-9. Create a non-admin user (default: `cephuser` / `cephuser123`)
 
 ## What Gets Created
 
