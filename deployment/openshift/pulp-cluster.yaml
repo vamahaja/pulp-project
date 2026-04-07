@@ -1,0 +1,45 @@
+apiVersion: repo-manager.pulpproject.org/v1beta2
+kind: Pulp
+metadata:
+  name: ceph-artifact-manager
+  namespace: ${PULP_NAMESPACE}
+spec:
+  api:
+    replicas: ${API_REPLICAS}
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      allowPrivilegeEscalation: false
+
+  content:
+    replicas: ${CONTENT_REPLICAS}
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      allowPrivilegeEscalation: false
+
+  worker:
+    replicas: ${WORKER_REPLICAS}
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      allowPrivilegeEscalation: false
+
+  database:
+    postgres_image: "postgres:15"
+    postgres_storage_class: "${POSTGRES_STORAGE_CLASS}" 
+    postgres_storage_requirements: "${DB_STORAGE}"
+
+  cache:
+    redis_storage_class: "${REDIS_STORAGE_CLASS}"
+
+  ingress_type: route
+  route_host: "${ROUTE_HOST}"
+
+  file_storage_storage_class: "${FILE_STORAGE_STORAGE_CLASS}" 
+  file_storage_size: "${FILE_STORAGE}"
+  file_storage_access_mode: "ReadWriteMany"
+
+  redis_secret: "pulp-redis-credentials"
+  pulp_admin_password_secret: "pulp-admin-password"
+  postgres_secret: "pulp-postgres-credentials"
