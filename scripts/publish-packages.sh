@@ -248,7 +248,8 @@ process_packages() {
     # Create publication for that specific version
     echo "Creating publication and distribution for repository $repo_name ..."
     local dist_base_path="${BASE_PATH}/${ARCH}"
-    local dist_name="$SHA1-$DISTRO-$DISTRO_VERSION-$ARCH-$pkg_type"
+    local sha_short="${SHA1: -8}"
+    local dist_name="dist-${DISTRO}-${DISTRO_VERSION}-${ARCH}-${pkg_type}-${sha_short}"
     local publication_href
     local -a pub_args=(--repository "$repo_name" --version "$version_number")
     if [ "$pkg_type" = "deb" ]; then
