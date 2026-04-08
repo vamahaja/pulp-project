@@ -11,7 +11,7 @@ FLAVOR="default"
 # Supported distros and their versions
 declare -A DISTROS
 DISTROS[ubuntu]="jammy noble"
-DISTROS[centos]="8 9"
+DISTROS[centos]="9"
 DISTROS[rocky]="10"
 
 # Supported architectures per distro
@@ -96,9 +96,9 @@ parse_arguments() {
 validate_params() {
     for distro in "${USER_DISTROS[@]}"; do
         distro="${distro// /}"
-        if [[ ! " ${DISTROS[$distro]} " =~ " ${distro} " ]]; then
+        if [[ ! " ${!DISTROS[@]} " =~ " ${distro} " ]]; then
             echo "Error: unsupported distro '$distro'. "
-            echo "Supported: ${DISTROS[*]}"
+            echo "Supported: ${!DISTROS[@]}"
             exit 1
         fi
     done
@@ -169,6 +169,8 @@ validate_chacra_upstream_url() {
         echo "Error: could not reach Chacra (HTTP $code): $url" >&2
         exit 1
     fi
+
+    return 0
 }
 
 apply_shaman_distribution_labels() {
@@ -312,7 +314,9 @@ sync_chacra_target_into_pulp() {
     dist_base_path="repos/${PROJECT}/${branch}/${SHA1}/${distro}/${distro_version}/flavors/${FLAVOR}/${architecture}"
     upstream_url="${CHACRA_BASE_URL}/${PROJECT}/${branch}/${SHA1}/${distro}/${distro_version}/flavors/${FLAVOR}/${architecture}/"
 
-    validate_chacra_upstream_url "$upstream_url"
+    if ! validate_chacra_upstream_url "$upstream_url"; then
+        return 1
+    fi
 
     configure_remote_and_sync_repository "$pkg_type" "$repo_name" "$remote_name" "$upstream_url"
     create_publication_and_distribution "$pkg_type" "$repo_name" "$dist_name" "$dist_base_path"
@@ -327,7 +331,7 @@ check_for_chacra_connection
 # Sync packages for each branch
 for BRANCH in "${USER_BRANCHES[@]}"; do
     for DISTRO in "${USER_DISTROS[@]}"; do
-        for DISTRO_VERSION in "${DISTROS[$DISTRO]}"; do
+        for DISTRO_VERSION in ${DISTROS[$DISTRO]}; do
             for ARCHITECTURE in ${USER_ARCHITECTURES}; do
                 if [[ ! " ${ARCHITECTURES[$DISTRO]} " =~ " ${ARCHITECTURE} " ]]; then
                     echo "Warning: unsupported architecture '$ARCHITECTURE' for distro '$DISTRO'" >&2
