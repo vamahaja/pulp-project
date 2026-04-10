@@ -5,6 +5,7 @@ set -euo pipefail
 
 # Default values
 PROJECT=${PROJECT:-"ceph"}
+TLS_VERIFY=false
 
 # Show help message
 show_help() {
@@ -19,7 +20,7 @@ Required:
     --username USERNAME         Username for authentication
     --password PASSWORD         Password for authentication
     --tls-verify                Enable TLS verification for the push
-                                (optional flag, default: true)
+                                (optional flag, default: false)
 
 Environment:
     PROJECT             Project name for image names (default: ceph)
@@ -91,7 +92,7 @@ get_image_architecture() {
 login_to_registry() {
     if [ -n "${USERNAME:-}" ] && [ -n "${PASSWORD:-}" ]; then
         echo "Logging in to registry $REGISTRY with username $USERNAME"
-        if ! podman login $REGISTRY -u $USERNAME -p $PASSWORD; then
+        if ! podman login --tls-verify=$TLS_VERIFY $REGISTRY -u $USERNAME -p $PASSWORD; then
             echo "Error: failed to login to registry $REGISTRY with username $USERNAME" >&2
             exit 1
         fi
@@ -108,7 +109,7 @@ publish_image() {
         echo "Publishing image $image (architecture: $arch) to registry $REGISTRY_HOST"
 
         podman tag "$image" "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG-$arch"
-        podman push --tls-verify=${TLS_VERIFY:-false} "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG-$arch"
+        podman push --tls-verify=$TLS_VERIFY "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG-$arch"
     done
 }
 
@@ -129,7 +130,7 @@ update_manifest_list() {
     done
 
     # Push manifest list
-    podman manifest push --tls-verify=${TLS_VERIFY:-false} "$manifest_list" "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG"
+    podman manifest push --tls-verify=$TLS_VERIFY "$manifest_list" "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG"
 }
 
 # Parse user arguments
