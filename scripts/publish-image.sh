@@ -105,10 +105,10 @@ publish_image() {
     local image arch
     for image in "${IMAGES[@]}"; do
         arch=$(get_image_architecture "$image")
-        echo "Publishing image $image (architecture: $arch) to registry $REGISTRY"
+        echo "Publishing image $image (architecture: $arch) to registry $REGISTRY_HOST"
 
-        podman tag "$image" "$REGISTRY/$BASE_PATH/$PROJECT:$TAG-$arch"
-        podman push --tls-verify=${TLS_VERIFY:-false} "$REGISTRY/$BASE_PATH/$PROJECT:$TAG-$arch"
+        podman tag "$image" "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG-$arch"
+        podman push --tls-verify=${TLS_VERIFY:-false} "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG-$arch"
     done
 }
 
@@ -125,15 +125,19 @@ update_manifest_list() {
         arch=$(get_image_architecture "$image")
         echo "Updating manifest list for image $image (architecture: $arch)"
 
-        podman manifest add "$manifest_list" "docker://$REGISTRY/$BASE_PATH/$PROJECT:$TAG-$arch"
+        podman manifest add "$manifest_list" "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG-$arch"
     done
 
     # Push manifest list
-    podman manifest push --tls-verify=$TLS_VERIFY "$manifest_list" "$REGISTRY/$BASE_PATH/$PROJECT:$TAG"
+    podman manifest push --tls-verify=${TLS_VERIFY:-false} "$manifest_list" "$REGISTRY_HOST/$BASE_PATH/$PROJECT:$TAG"
 }
 
 # Parse user arguments
 parse_arguments "$@"
+
+# Strip http:// or https:// from REGISTRY for podman image references
+REGISTRY_HOST="${REGISTRY#http://}"
+REGISTRY_HOST="${REGISTRY_HOST#https://}"
 
 # Login to registry
 login_to_registry
