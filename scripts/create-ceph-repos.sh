@@ -234,7 +234,11 @@ create_ceph_repos() {
                 for architecture in "${distro_archs[@]}"; do
                     repo_name="${PROJECT}-${branch}-${distro}-${distro_version}-${architecture}"
                     echo "Creating ${repo_type} repository ${repo_name} ..."
-                    if ! pulp "${repo_type}" repository create --name "${repo_name}"; then
+                    create_repository_cmd="pulp ${repo_type} repository create --name ${repo_name}"
+                    if [[ "$repo_type" == "rpm" ]]; then
+                        create_repository_cmd+=" --no-autopublish"
+                    fi
+                    if ! ${create_repository_cmd}; then
                         echo "Error: failed to create repository ${repo_name}" >&2
                         exit 1
                     fi
