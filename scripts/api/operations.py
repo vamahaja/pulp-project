@@ -198,7 +198,7 @@ def sync_repository(pulp, repository_href):
 
     logger.info(f'Starting repository sync: {sync_url}')
 
-    response = pulp.post(sync_url, json={})
+    response = pulp.post(sync_url, json={'mirror': True})
     _finish_async_response(
         pulp, response, (200, 202), 'Failed to start repository sync'
     )
