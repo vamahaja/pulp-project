@@ -87,6 +87,7 @@ configure_client() {
         --base-url "${PULP_SERVER_URL}" \
         --username "${USERNAME}" \
         --password "${PASSWORD}" \
+        --no-verify-ssl \
         ${OVERWRITE:+--overwrite}
 
     if ! pulp status; then
