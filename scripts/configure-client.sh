@@ -3,81 +3,128 @@
 # Set error handling
 set -euo pipefail
 
-# Default values
-PROJECT=${PROJECT:-"ceph"}
-PULP_ADMIN_USERNAME=${PULP_ADMIN_USERNAME:-"admin"}
-PULP_ADMIN_PASSWORD=${PULP_ADMIN_PASSWORD:-"pulp123"}
+log() {
+    if [[ "${1:-}" == ERROR ]]; then
+        echo "[ERROR] ${*:2}" >&2
+    else
+        echo "[INFO]  $*"
+    fi
+}
 
-# Show help message
+USERS_YAML="${USERS_YAML:-configs/users.yaml}"
+
 show_help() {
   cat << 'EOF'
 Usage: configure-client.sh [OPTIONS]
 
-Set up a Pulp client configuration.
+Set up a Pulp client configuration and optionally assign RBAC roles.
 
-Required:
-    --username USERNAME     Username for authentication
-    --password PASSWORD     Password for authentication
-    --set-user-permissions  Add user permissions to the Pulp server (default: false)
-    --overwrite             Overwrite existing configuration (default: false)
+Required (one of):
+    -f, --file FILE              Path to users YAML (e.g. configs/users.yaml).
+                                 Required when using a role flag; admin and user
+                                 credentials are read from the file.
+
+Optional:
+    --set-admin-permissions      Assign full management roles to the admin user
+    --set-publisher-permissions  Assign create/upload roles to the publisher user
+    --set-viewer-permissions     Assign read-only viewer roles to the viewer user
+    --overwrite                  Overwrite existing pulp-cli configuration
+    -h, --help                   Show this help
 
 Environment:
-    PULP_SERVER_URL     Pulp server URL
-    PULP_ADMIN_USERNAME Pulp admin username (default: admin)
-    PULP_ADMIN_PASSWORD Pulp admin password
+    PULP_SERVER_URL     Pulp server URL (required)
+    USERS_YAML          Default path for -f when flag is not provided (default: configs/users.yaml)
 
 Examples:
-    configure-client.sh --help
-    configure-client.sh --username cephuser --password cephuser123 --overwrite
-    configure-client.sh --username cephuser --password cephuser123 --set-user-permissions --overwrite
+    configure-client.sh -f configs/users.yaml --set-admin-permissions --overwrite
+    configure-client.sh -f configs/users.yaml --set-publisher-permissions --overwrite
+    configure-client.sh -f configs/users.yaml --set-viewer-permissions --overwrite
+    configure-client.sh -f configs/users.yaml --overwrite
 EOF
 }
 
 parse_arguments() {
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --username)
-              USERNAME="$2"
-              shift 2
-              ;;
-            --password)
-              PASSWORD="$2"
-              shift 2
-              ;;
+            -f|--file)
+                USERS_YAML="$2"
+                shift 2
+                ;;
             --overwrite)
-              OVERWRITE=true
-              shift
-              ;;
-            --set-user-permissions)
-              SET_USER_PERMISSIONS=true
-              shift
-              ;;
+                OVERWRITE=true
+                shift
+                ;;
+            --set-admin-permissions)
+                SET_ADMIN_PERMISSIONS=true
+                shift
+                ;;
+            --set-publisher-permissions)
+                SET_PUBLISHER_PERMISSIONS=true
+                shift
+                ;;
+            --set-viewer-permissions)
+                SET_VIEWER_PERMISSIONS=true
+                shift
+                ;;
             -h|--help)
-              show_help
-              exit 0
-              ;;
+                show_help
+                exit 0
+                ;;
             *)
-              echo "Error: unknown option '$1'" >&2
-              exit 1
-              ;;
+                log ERROR "Unknown option '$1'"
+                exit 1
+                ;;
         esac
+    done
+}
+
+load_user_from_yaml() {
+    local f="$1"
+    local section="$2"
+
+    if ! command -v yq >/dev/null 2>&1; then
+        log ERROR "yq is required to read credentials from ${f}."
+        exit 1
+    fi
+    if [[ ! -f "$f" ]]; then
+        log ERROR "Config file not found: ${f}"
+        exit 1
+    fi
+
+    # Admin credentials for role assignment (from .default.* — the built-in Django superuser)
+    PULP_ADMIN_USERNAME=$(yq -r '.default.username' "$f")
+    PULP_ADMIN_PASSWORD=$(yq -r '.default.password' "$f")
+
+    # User credentials for pulp config create (from the requested section)
+    USERNAME=$(yq -r ".${section}.username" "$f")
+    PASSWORD=$(yq -r ".${section}.password" "$f")
+
+    local v
+    for v in PULP_ADMIN_USERNAME PULP_ADMIN_PASSWORD USERNAME PASSWORD; do
+        if [[ -z "${!v:-}" || "${!v}" == "null" ]]; then
+            log ERROR "${v} is empty or null in ${f} (section: ${section})."
+            exit 1
+        fi
     done
 }
 
 validate_parameters() {
     if [ -z "${PULP_SERVER_URL:-}" ]; then
-        echo "Error: PULP_SERVER_URL is not set."
-        echo "Please set it in the environment variables."
+        log ERROR "PULP_SERVER_URL is not set."
         exit 1
     fi
 
-    if [ -z "${USERNAME:-}" ]; then
-        echo "Error: --username is required."
+    local perm_flags=0
+    [ "${SET_ADMIN_PERMISSIONS:-false}" = "true" ]     && perm_flags=$((perm_flags + 1))
+    [ "${SET_VIEWER_PERMISSIONS:-false}" = "true" ]    && perm_flags=$((perm_flags + 1))
+    [ "${SET_PUBLISHER_PERMISSIONS:-false}" = "true" ] && perm_flags=$((perm_flags + 1))
+    if [ "$perm_flags" -gt 1 ]; then
+        log ERROR "Use only one of --set-admin-permissions, --set-viewer-permissions, or --set-publisher-permissions per run."
         exit 1
     fi
 
-    if [ -z "${PASSWORD:-}" ]; then
-        echo "Error: --password is required."
+    if [ "$perm_flags" -gt 0 ] && [[ ! -f "${USERS_YAML}" ]]; then
+        log ERROR "Config file not found: ${USERS_YAML}. Provide -f <file> or set USERS_YAML."
         exit 1
     fi
 }
@@ -91,7 +138,7 @@ configure_client() {
         ${OVERWRITE:+--overwrite}
 
     if ! pulp status; then
-        echo "Error: Pulp client is not configured correctly."
+        log ERROR "Pulp client is not configured correctly."
         exit 1
     fi
 }
@@ -102,72 +149,118 @@ install_client() {
         pip_args+=(--break-system-packages)
     fi
 
-    # Install pulp client
     if ! command -v pulp &>/dev/null; then
-        echo "Installing pulp client ..."
+        log "Installing pulp client ..."
         pip install "${pip_args[@]}" pulp-cli
     else
-        echo "Pulp client is already installed."
+        log "Pulp client is already installed."
     fi
 
-    # Install pulp client deb plugin
     if ! pip show pulp-cli-deb &>/dev/null; then
-        echo "Installing pulp client deb plugin ..."
+        log "Installing pulp client deb plugin ..."
         pip install "${pip_args[@]}" pulp-cli-deb
     else
-        echo "Pulp client deb plugin is already installed."
+        log "Pulp client deb plugin is already installed."
     fi
 }
 
-set_user_permissions() {
-    # Set pulp user permissions
-    ROLES=(
-        "rpm.rpmrepository_creator"
-        "rpm.rpmremote_creator"
-        "rpm.rpmdistribution_creator"
-        "rpm.rpmpublication_creator"
-        "deb.aptrepository_creator"
-        "deb.aptremote_creator"
-        "deb.aptdistribution_creator"
-        "deb.aptpublication_creator"
-        "deb.verbatimpublication_creator"
-        "container.containerrepository_creator"
-        "container.containerremote_creator"
-        "container.containerdistribution_creator"
-        "core.upload_creator"
-    )
+# Model-level role assignment (empty --object grants access to all objects of that type).
+assign_roles() {
+    local label="$1"
+    shift
+    local roles=("$@")
 
-    for role in "${ROLES[@]}"; do
-        echo "Assigning $role to user $USERNAME ..."
+    log "Assigning ${label} roles to user ${USERNAME} ..."
+    for role in "${roles[@]}"; do
+        log "  Assigning ${role} ..."
 
-        # Grant cephuser the ability to create RPM repositories (ignore if already assigned)
-        if ! output=$(pulp --username ${PULP_ADMIN_USERNAME} --password ${PULP_ADMIN_PASSWORD} \
+        local output
+        if ! output=$(pulp --username "${PULP_ADMIN_USERNAME}" --password "${PULP_ADMIN_PASSWORD}" \
             user role-assignment add \
             --username "${USERNAME}" \
             --role "$role" \
             --object "" 2>&1); then
             if [[ "$output" == *"already assigned"* ]]; then
-                echo "Warning: Role $role already assigned to user $USERNAME, skipping ..."
+                log "  Warning: Role ${role} already assigned, skipping ..."
             else
-                echo "Error: Failed to assign role $role to user $USERNAME: $output" >&2
+                log ERROR "Failed to assign role ${role} to user ${USERNAME}: ${output}"
                 exit 1
             fi
         fi
     done
 }
 
-# Parse arguments and validate parameters
+# Role lists come only from configs/users.yaml; yq required.
+_ROLES=()
+
+load_roles_for_section() {
+    local section="$1"
+    local f="${USERS_YAML}"
+
+    _ROLES=()
+    mapfile -t _ROLES < <(yq -r ".${section}.roles[]?" "$f" 2>/dev/null || true)
+
+    local cleaned=()
+    local r
+    for r in "${_ROLES[@]}"; do
+        [[ -n "$r" && "$r" != "null" ]] && cleaned+=("$r")
+    done
+    _ROLES=("${cleaned[@]}")
+
+    if [[ ${#_ROLES[@]} -eq 0 ]]; then
+        log ERROR "${f} must define a non-empty .${section}.roles list."
+        exit 1
+    fi
+}
+
+set_admin_permissions() {
+    load_roles_for_section "admin"
+    assign_roles "admin (full management)" "${_ROLES[@]}"
+}
+
+set_publisher_permissions() {
+    load_roles_for_section "publisher"
+    assign_roles "publisher (create / upload)" "${_ROLES[@]}"
+}
+
+set_viewer_permissions() {
+    load_roles_for_section "viewer"
+    assign_roles "viewer (read-only)" "${_ROLES[@]}"
+}
+
+# Parse and validate
 parse_arguments "$@"
 validate_parameters
 
-# Install client and configure it
+# If a role flag is given, user/admin credentials come from YAML; configure accordingly.
+if [ "${SET_ADMIN_PERMISSIONS:-false}" = "true" ]; then
+    load_user_from_yaml "${USERS_YAML}" "admin"
+elif [ "${SET_PUBLISHER_PERMISSIONS:-false}" = "true" ]; then
+    load_user_from_yaml "${USERS_YAML}" "publisher"
+elif [ "${SET_VIEWER_PERMISSIONS:-false}" = "true" ]; then
+    load_user_from_yaml "${USERS_YAML}" "viewer"
+else
+    if [[ ! -f "${USERS_YAML}" ]]; then
+        log ERROR "Config file not found: ${USERS_YAML}. Provide -f <file> or set USERS_YAML."
+        exit 1
+    fi
+    # Default: load publisher credentials for pulp config
+    load_user_from_yaml "${USERS_YAML}" "publisher"
+fi
+
+# Install and configure pulp CLI
 install_client
 configure_client
 
-# Set user permissions
-if [ "${SET_USER_PERMISSIONS:-false}" = "true" ]; then
-    set_user_permissions
+# Assign RBAC roles
+if [ "${SET_ADMIN_PERMISSIONS:-false}" = "true" ]; then
+    set_admin_permissions
+fi
+if [ "${SET_VIEWER_PERMISSIONS:-false}" = "true" ]; then
+    set_viewer_permissions
+fi
+if [ "${SET_PUBLISHER_PERMISSIONS:-false}" = "true" ]; then
+    set_publisher_permissions
 fi
 
-# Debug
-echo "Pulp client is configured and working correctly."
+log "Pulp client is configured and working correctly."

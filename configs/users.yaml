@@ -1,0 +1,72 @@
+# Single source of truth for Pulp users and database settings.
+# Used by: deployment/podman/deploy.sh and scripts/configure-client.sh
+
+# Built-in Pulp admin (target of reset-admin-password; used as API auth for creating users)
+default:
+  username: admin
+  password: pulp123
+
+# Additional Pulp admin user created by deploy.sh
+admin:
+  username: cephadmin
+  password: cephadmin123
+  roles:
+    - rpm.admin
+    - deb.admin
+    - container.containerrepository_creator
+    - container.containerrepository_owner
+    - container.containerremote_creator
+    - container.containerremote_owner
+    - container.containerdistribution_creator
+    - container.containerdistribution_owner
+    - container.containernamespace_creator
+    - container.containernamespace_owner
+    - container.containerpullthroughremote_creator
+    - container.containerpullthroughremote_owner
+    - container.containerpullthroughdistribution_creator
+    - container.containerpullthroughdistribution_owner
+    - core.task_owner
+    - core.upload_owner
+    - core.group_owner
+
+# Publisher user (create / upload workflows)
+publisher:
+  username: cephpublisheruser
+  password: cephpublisheruser123
+  # Pulp RBAC roles for configure-client.sh --set-publisher-permissions (model scope, --object "")
+  roles:
+    - rpm.rpmrepository_creator
+    - rpm.rpmremote_creator
+    - rpm.rpmdistribution_creator
+    - rpm.rpmpublication_creator
+    - deb.aptrepository_creator
+    - deb.aptremote_creator
+    - deb.aptdistribution_creator
+    - deb.aptpublication_creator
+    - deb.verbatimpublication_creator
+    - container.containerrepository_creator
+    - container.containerremote_creator
+    - container.containerdistribution_creator
+    - core.upload_creator
+
+# Viewer user (read-only)
+viewer:
+  username: cephvieweruser
+  password: cephvieweruser123
+  # Pulp RBAC roles for configure-client.sh --set-viewer-permissions
+  roles:
+    - rpm.viewer
+    - deb.aptrepository_viewer
+    - deb.aptremote_viewer
+    - deb.aptdistribution_viewer
+    - deb.aptpublication_viewer
+    - deb.verbatimpublication_viewer
+    - container.containerrepository_viewer
+    - container.containerremote_viewer
+    - container.containerdistribution_consumer
+
+# PostgreSQL database settings
+db:
+  dbname: pulpdb
+  username: pulp
+  password: pulp123
