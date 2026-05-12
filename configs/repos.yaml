@@ -1,0 +1,325 @@
+ceph:
+  main:
+    - name: ceph-main-ubuntu-jammy-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: x86_64
+        - distro: ubuntu
+        - distro_version: jammy
+    - name: ceph-main-ubuntu-jammy-arm64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: arm64
+        - distro: ubuntu
+        - distro_version: jammy
+    - name: ceph-main-ubuntu-noble-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: x86_64
+        - distro: ubuntu
+        - distro_version: noble
+    - name: ceph-main-ubuntu-noble-arm64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: arm64
+        - distro: ubuntu
+        - distro_version: noble
+    - name: ceph-main-centos-9.stream-noarch
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: noarch
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-main-centos-9.stream-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: x86_64
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-main-centos-9.stream-aarch64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: aarch64
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-main-centos-9.stream-source
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: source
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-main-rocky-10-noarch
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: noarch
+        - distro: rocky
+        - distro_version: 10
+    - name: ceph-main-rocky-10-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: x86_64
+        - distro: rocky
+        - distro_version: 10
+    - name: ceph-main-rocky-10-aarch64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: aarch64
+        - distro: rocky
+        - distro_version: 10
+    - name: ceph-main-rocky-10-source
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: main
+        - arch: source
+        - distro: rocky
+        - distro_version: 10
+  tentacle:
+    - name: ceph-tentacle-ubuntu-jammy-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: x86_64
+        - distro: ubuntu
+        - distro_version: jammy
+    - name: ceph-tentacle-ubuntu-jammy-arm64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: arm64
+        - distro: ubuntu
+        - distro_version: jammy
+    - name: ceph-tentacle-ubuntu-noble-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: x86_64
+        - distro: ubuntu
+        - distro_version: noble
+    - name: ceph-tentacle-ubuntu-noble-arm64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: arm64
+        - distro: ubuntu
+        - distro_version: noble
+    - name: ceph-tentacle-centos-9.stream-noarch
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: noarch
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-tentacle-centos-9.stream-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: x86_64
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-tentacle-centos-9.stream-aarch64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: aarch64
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-tentacle-centos-9.stream-source
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: source
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-tentacle-rocky-10-noarch
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: noarch
+        - distro: rocky
+        - distro_version: 10
+    - name: ceph-tentacle-rocky-10-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: x86_64
+        - distro: rocky
+        - distro_version: 10
+    - name: ceph-tentacle-rocky-10-aarch64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: aarch64
+        - distro: rocky
+        - distro_version: 10
+    - name: ceph-tentacle-rocky-10-source
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: tentacle
+        - arch: source
+        - distro: rocky
+        - distro_version: 10
+  squid:
+    - name: ceph-squid-ubuntu-jammy-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: squid
+        - arch: x86_64
+        - distro: ubuntu
+        - distro_version: jammy
+    - name: ceph-squid-ubuntu-jammy-arm64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: squid
+        - arch: arm64
+        - distro: ubuntu
+        - distro_version: jammy
+    - name: ceph-squid-ubuntu-noble-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: squid
+        - arch: x86_64
+        - distro: ubuntu
+        - distro_version: noble
+    - name: ceph-squid-ubuntu-noble-arm64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: squid
+        - arch: arm64
+        - distro: ubuntu
+        - distro_version: noble
+    - name: ceph-squid-centos-9.stream-noarch
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: squid
+        - arch: noarch
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-squid-centos-9.stream-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: squid
+        - arch: x86_64
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-squid-centos-9.stream-aarch64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: squid
+        - arch: aarch64
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-squid-centos-9.stream-source
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: squid
+        - arch: source
+        - distro: centos
+        - distro_version: 9.stream
+  reef:
+    - name: ceph-reef-ubuntu-jammy-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: reef
+        - arch: x86_64
+        - distro: ubuntu
+        - distro_version: jammy
+    - name: ceph-reef-ubuntu-jammy-arm64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: reef
+        - arch: arm64
+        - distro: ubuntu
+        - distro_version: jammy
+    - name: ceph-reef-ubuntu-noble-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: reef
+        - arch: x86_64
+        - distro: ubuntu
+        - distro_version: noble
+    - name: ceph-reef-ubuntu-noble-arm64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: reef
+        - arch: arm64
+        - distro: ubuntu
+        - distro_version: noble
+    - name: ceph-reef-centos-9.stream-noarch
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: reef
+        - arch: noarch
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-reef-centos-9.stream-x86_64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: reef
+        - arch: x86_64
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-reef-centos-9.stream-aarch64
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: reef
+        - arch: aarch64
+        - distro: centos
+        - distro_version: 9.stream
+    - name: ceph-reef-centos-9.stream-source
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: reef
+        - arch: source
+        - distro: centos
+        - distro_version: 9.stream

@@ -1,279 +1,144 @@
 #!/bin/bash
 
-# Set error handling
 set -euo pipefail
 
-# Default values
-PROJECT=${PROJECT:-"ceph"}
+REPOS_YAML=""
+PROJECT=""
+BRANCH=""
+LABELS=()
 
-# Supported distros and their versions
-declare -A DISTROS
-DISTROS[ubuntu]="jammy noble"
-DISTROS[centos]="8 9"
-DISTROS[rocky]="10"
-
-# Supported architectures per distro
-declare -A ARCHITECTURES
-ARCHITECTURES[ubuntu]="x86_64 arm64"
-ARCHITECTURES[centos]="noarch x86_64 aarch64 SRPMS"
-ARCHITECTURES[rocky]="noarch x86_64 aarch64 SRPMS"
-
-# Supported ceph branches
-CEPH_BRANCHES=(main reef squid tentacle)
-
-# Container image repositories
-CONTAINER_IMAGE_REPOSITORIES=(ceph ceph-ci)
-
-# Parse user arguments
-USER_DISTROS=()
-USER_BRANCHES=()
-USER_ARCHITECTURES=()
-USER_CONTAINER_REPOSITORIES=()
-
-# Show help message
 show_help() {
-    cat <<EOF
+    cat << 'EOF'
 Usage: create-ceph-repos.sh [OPTIONS]
 
-Create Pulp repositories for Ceph packages. Omit options to create repos for all
-supported distros, branches.
+Creates Pulp repositories from a YAML definition.
 
-Options:
-    --distro LIST                   Comma-separated distros (default: all)
-                                    Supported: ${!DISTROS[*]}
+Required:
+    -p, --project <name>    Project name
+    -f, --file <path>       Path to the YAML file
 
-    --branches LIST                 Comma-separated Ceph branches (default: all)
-                                    Supported: ${CEPH_BRANCHES[*]}
-
-    --arch LIST                     Comma-separated architectures (default: all per distro)
-                                    ubuntu: ${ARCHITECTURES[ubuntu]}
-                                    centos: ${ARCHITECTURES[centos]}
-                                    rocky:  ${ARCHITECTURES[rocky]}
-
-    --container-repositories LIST   Comma-separated container image repositories (default: all)
-                                    Supported: ${CONTAINER_IMAGE_REPOSITORIES[*]}
-
-    -h, --help                      Show this help and exit
-
-Environment:
-    PROJECT                         Project name for repo names (default: ceph)
-
-Examples:
-    create-ceph-repos.sh --help
-    create-ceph-repos.sh --distro ubuntu,centos --branches reef --arch x86_64
+Optional:
+    -l, --labels <labels>   Labels to filter the repositories
+    -h, --help              Show this help
 EOF
 }
 
-# Parse and validate user arguments.
-parse_args() {
+parse_arguments() {
     while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --distro)
-                [[ $# -lt 2 ]] && { echo "Error: --distro requires a value" >&2; exit 1; }
-                IFS=',' read -ra USER_DISTROS <<< "$2"
+        case $1 in
+            -f|--file)
+                if [[ $# -lt 2 ]]; then
+                echo "Error: $1 requires a value."
+                exit 1
+                fi
+                REPOS_YAML="$2"
                 shift 2
                 ;;
-            --branches)
-                [[ $# -lt 2 ]] && { echo "Error: --branches requires a value" >&2; exit 1; }
-                IFS=',' read -ra USER_BRANCHES <<< "$2"
+            -p|--project)
+                if [[ $# -lt 2 ]]; then
+                echo "Error: $1 requires a value."
+                exit 1
+                fi
+                PROJECT="$2"
                 shift 2
                 ;;
-            --arch)
-                [[ $# -lt 2 ]] && { echo "Error: --arch requires a value" >&2; exit 1; }
-                IFS=',' read -ra USER_ARCHITECTURES <<< "$2"
-                shift 2
-                ;;
-            --container-repositories)
-                [[ $# -lt 2 ]] && { echo "Error: --container-repositories requires a value" >&2; exit 1; }
-                IFS=',' read -ra USER_CONTAINER_REPOSITORIES <<< "$2"
+            -l|--labels)
+                if [[ $# -lt 2 ]]; then
+                echo "Error: $1 requires a value."
+                exit 1
+                fi
+                IFS=',' read -r -a LABELS <<< "$2"
                 shift 2
                 ;;
             -h|--help)
                 show_help
                 exit 0
                 ;;
+            -*)
+                echo "Error: Unknown option: $1"
+                exit 1
+                ;;
             *)
-                echo "Error: unknown option '$1'" >&2
+                echo "Error: Unexpected argument: $1"
                 exit 1
                 ;;
         esac
     done
 }
 
-# Validate user arguments against supported distros and branches.
-validate_user_args() {
-    local a d b r
-
-    validate_distro() {
-        [[ -n "${DISTROS[$1]:-}" ]]
-    }
-    for d in "${USER_DISTROS[@]:-}"; do
-        [[ -z "$d" ]] && continue
-        d="${d// /}"
-        if ! validate_distro "$d"; then
-            echo "Error: unsupported distro '$d'. Supported: ${!DISTROS[*]}" >&2
-            exit 1
-        fi
-    done
-
-    validate_branch() {
-        local x
-        for x in "${CEPH_BRANCHES[@]}"; do [[ "$x" == "$1" ]] && return 0; done
-        return 1
-    }
-    for b in "${USER_BRANCHES[@]:-}"; do
-        [[ -z "$b" ]] && continue
-        b="${b// /}"
-        if ! validate_branch "$b"; then
-            echo "Error: unsupported branch '$b'. Supported: ${CEPH_BRANCHES[*]}" >&2
-            exit 1
-        fi
-    done
-
-    # Validate arch against all distro-specific architecture lists
-    validate_architecture() {
-        local arch="$1" distro x
-        for distro in "${USER_DISTROS[@]:-}" "${!DISTROS[@]}"; do
-            [[ -z "$distro" ]] && continue
-            for x in ${ARCHITECTURES[$distro]:-}; do [[ "$x" == "$arch" ]] && return 0; done
-        done
-        return 1
-    }
-    for a in "${USER_ARCHITECTURES[@]:-}"; do
-        [[ -z "$a" ]] && continue
-        a="${a// /}"
-        if ! validate_architecture "$a"; then
-            echo "Error: unsupported architecture '$a'" >&2
-            exit 1
-        fi
-    done
-
-    validate_container_repository() {
-        local x
-        for x in "${CONTAINER_IMAGE_REPOSITORIES[@]}"; do [[ "$x" == "$1" ]] && return 0; done
-        return 1
-    }
-    for r in "${USER_CONTAINER_REPOSITORIES[@]:-}"; do
-        [[ -z "$r" ]] && continue
-        r="${r// /}"
-        if ! validate_container_repository "$r"; then
-            echo "Error: unsupported container repository '$r'. Supported: ${CONTAINER_IMAGE_REPOSITORIES[*]}" >&2
-            exit 1
-        fi
-    done
-}
-
-# Resolve which distros and branches to use (default: all).
-resolve_supported_params() {
-    trim_and_filter() {
-        local -n arr=$1
-        local -n out=$2
-        out=()
-        for x in "${arr[@]}"; do
-            x="${x// /}"
-            [[ -n "$x" ]] && out+=("$x")
-        done
-    }
-
-    DISTROS_TO_USE=("${!DISTROS[@]}")
-    if [[ ${#USER_DISTROS[@]} -gt 0 ]]; then
-        trim_and_filter USER_DISTROS DISTROS_TO_USE
-        [[ ${#DISTROS_TO_USE[@]} -eq 0 ]] && DISTROS_TO_USE=("${!DISTROS[@]}")
+validate_params() {
+    if [[ -z "${REPOS_YAML}" ]]; then
+        echo "Error: -f / --file is required. Use --help for usage."
+        exit 1
     fi
-
-    BRANCHES_TO_USE=("${CEPH_BRANCHES[@]}")
-    if [[ ${#USER_BRANCHES[@]} -gt 0 ]]; then
-        trim_and_filter USER_BRANCHES BRANCHES_TO_USE
-        [[ ${#BRANCHES_TO_USE[@]} -eq 0 ]] && BRANCHES_TO_USE=("${CEPH_BRANCHES[@]}")
+    if [[ -z "${PROJECT}" ]]; then
+        echo "Error: -p / --project is required. Use --help for usage."
+        exit 1
     fi
-
-    USER_ARCH_FILTER=()
-    if [[ ${#USER_ARCHITECTURES[@]} -gt 0 ]]; then
-        for x in "${USER_ARCHITECTURES[@]}"; do
-            x="${x// /}"
-            [[ -n "$x" ]] && USER_ARCH_FILTER+=("$x")
-        done
-    fi
-
-    CONTAINER_IMAGE_REPOSITORIES_TO_USE=("${CONTAINER_IMAGE_REPOSITORIES[@]}")
-    if [[ ${#USER_CONTAINER_REPOSITORIES[@]} -gt 0 ]]; then
-        trim_and_filter USER_CONTAINER_REPOSITORIES CONTAINER_IMAGE_REPOSITORIES_TO_USE
-        [[ ${#CONTAINER_IMAGE_REPOSITORIES_TO_USE[@]} -eq 0 ]] && CONTAINER_IMAGE_REPOSITORIES_TO_USE=("${CONTAINER_IMAGE_REPOSITORIES[@]}")
+    if [[ ! -f "${REPOS_YAML}" ]]; then
+        echo "Error: YAML file not found or not a regular file: ${REPOS_YAML}"
+        exit 1
     fi
 }
 
-# Create repositories for each branch distro
-create_ceph_repos() {
-    local branch distro distro_version repo_type repo_name
+get_repos() {
+    local params=".$PROJECT[][]"
 
-    for distro in "${DISTROS_TO_USE[@]}"; do
-        for branch in "${BRANCHES_TO_USE[@]}"; do
-            [[ -z "$distro" ]] && continue
-            distro="${distro// /}"
+    local filters=()
+    for label in "${LABELS[@]}"; do
+        local key=$(echo "$label" | cut -d '=' -f 1)
+        local value=$(echo "$label" | cut -d '=' -f 2)
 
-            # Set repository type based on distro
-            repo_type="rpm"
-            if [[ "$distro" == "ubuntu" ]]; then
-                repo_type="deb"
+        filters+=("(.labels[].$key == \"$value\")")
+    done
+
+    if [[ ${#filters[@]} -gt 0 ]]; then
+        local joined_filter
+        joined_filter=$(printf " and %s" "${filters[@]}")
+        joined_filter=${joined_filter# and }
+
+        params+=" | select($joined_filter)"
+    fi
+    
+    yq "$params" "$REPOS_YAML" --output-format=json
+}
+
+create_repos() {
+    local repos=$(get_repos)
+    echo "$repos" | jq -c '.' | while read -r repo; do
+        local name=$(echo "$repo" | jq -r '.name')
+        local labels=$(echo "$repo" | jq -r '.labels')
+        local retain_repo_versions=$(echo "$repo" | jq -r '.retain_repo_versions')
+        local distro=$(echo "$repo" | jq -r '.labels[].distro | select(. != null)')
+
+        if [[ "$distro" == "ubuntu" ]]; then
+            if ! pulp deb repository show --name "$name" &>/dev/null; then
+                echo "Creating deb repository: $name"
+                pulp deb repository create \
+                    --name "$name" \
+                    --retain-repo-versions "$retain_repo_versions"
+            else
+                echo "Deb repository already exists: $name"
             fi
-
-            # Resolve architectures for this distro (apply user filter if provided)
-            local distro_archs=()
-            for arch in ${ARCHITECTURES[$distro]}; do
-                if [[ ${#USER_ARCH_FILTER[@]} -gt 0 ]]; then
-                    local match=false
-                    for f in "${USER_ARCH_FILTER[@]}"; do [[ "$f" == "$arch" ]] && match=true; done
-                    [[ "$match" == "false" ]] && continue
-                fi
-                distro_archs+=("$arch")
-            done
-            [[ ${#distro_archs[@]} -eq 0 ]] && distro_archs=(${ARCHITECTURES[$distro]})
-
-            # Create one repository per distro version and architecture
-            for distro_version in ${DISTROS[$distro]}; do
-                for architecture in "${distro_archs[@]}"; do
-                    repo_name="${PROJECT}-${branch}-${distro}-${distro_version}-${architecture}"
-                    echo "Creating ${repo_type} repository ${repo_name} ..."
-                    create_repository_cmd="pulp ${repo_type} repository create --name ${repo_name}"
-                    if [[ "$repo_type" == "rpm" ]]; then
-                        create_repository_cmd+=" --no-autopublish"
-                    fi
-                    if ! ${create_repository_cmd}; then
-                        echo "Error: failed to create repository ${repo_name}" >&2
-                        exit 1
-                    fi
-                done
-            done
-        done
-    done
-}
-
-# Create container image repositories
-create_container_image_repos() {
-    for repo in "${CONTAINER_IMAGE_REPOSITORIES_TO_USE[@]}"; do
-        echo "Creating container image repository ${repo} ..."
-
-        if ! pulp container repository create --name "${repo}"; then
-            echo "Error: failed to create container image repository ${repo}" >&2
-            exit 1
-        fi
-
-        if ! pulp container distribution create --name "${repo}-dist" \
-            --repository "${repo}" \
-            --base-path "${repo}"; then
-            echo "Error: failed to create container image distribution ${repo}-dist" >&2
-            exit 1
+        else
+            if ! pulp rpm repository show --name "$name" &>/dev/null; then
+                local labels_json=$(echo "$labels" | jq 'add')
+                echo "Creating rpm repository: $name with labels: $labels_json"
+                pulp rpm repository create \
+                    --name "$name" \
+                    --retain-repo-versions "$retain_repo_versions" \
+                    --labels "$labels_json"
+            else
+                echo "RPM repository already exists: $name"
+            fi
         fi
     done
 }
 
-# Parse and validate user arguments
-parse_args "$@"
-validate_user_args
-resolve_supported_params
+main() {
+    parse_arguments "$@"
+    validate_params
+    create_repos
+}
 
-# Create repositories
-create_ceph_repos
-
-# Create container image repositories
-create_container_image_repos
+main "$@"
