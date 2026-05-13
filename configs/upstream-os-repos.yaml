@@ -1,0 +1,125 @@
+# Upstream OS package repositories to mirror into Pulp.
+# Read by scripts/sync-upstream-repos.sh.
+#
+# rpm entries: distro, version, component, arch, url
+# deb entries: distro, version, arch, url, distributions, components
+
+rpm:
+  # Rocky Linux 9
+  - distro: rocky
+    version: "9"
+    component: baseos
+    arch: x86_64
+    url: https://dl.rockylinux.org/pub/rocky/9/BaseOS/x86_64/os/
+  - distro: rocky
+    version: "9"
+    component: baseos
+    arch: aarch64
+    url: https://dl.rockylinux.org/pub/rocky/9/BaseOS/aarch64/os/
+  - distro: rocky
+    version: "9"
+    component: appstream
+    arch: x86_64
+    url: https://dl.rockylinux.org/pub/rocky/9/AppStream/x86_64/os/
+  - distro: rocky
+    version: "9"
+    component: appstream
+    arch: aarch64
+    url: https://dl.rockylinux.org/pub/rocky/9/AppStream/aarch64/os/
+
+  # Rocky Linux 10
+  - distro: rocky
+    version: "10"
+    component: baseos
+    arch: x86_64
+    url: https://dl.rockylinux.org/pub/rocky/10/BaseOS/x86_64/os/
+  - distro: rocky
+    version: "10"
+    component: baseos
+    arch: aarch64
+    url: https://dl.rockylinux.org/pub/rocky/10/BaseOS/aarch64/os/
+  - distro: rocky
+    version: "10"
+    component: appstream
+    arch: x86_64
+    url: https://dl.rockylinux.org/pub/rocky/10/AppStream/x86_64/os/
+  - distro: rocky
+    version: "10"
+    component: appstream
+    arch: aarch64
+    url: https://dl.rockylinux.org/pub/rocky/10/AppStream/aarch64/os/
+
+  # CentOS Stream 9
+  - distro: centos
+    version: 9stream
+    component: baseos
+    arch: x86_64
+    url: https://mirror.stream.centos.org/9-stream/BaseOS/x86_64/os/
+  - distro: centos
+    version: 9stream
+    component: baseos
+    arch: aarch64
+    url: https://mirror.stream.centos.org/9-stream/BaseOS/aarch64/os/
+  - distro: centos
+    version: 9stream
+    component: appstream
+    arch: x86_64
+    url: https://mirror.stream.centos.org/9-stream/AppStream/x86_64/os/
+  - distro: centos
+    version: 9stream
+    component: appstream
+    arch: aarch64
+    url: https://mirror.stream.centos.org/9-stream/AppStream/aarch64/os/
+
+  # EPEL 9
+  - distro: epel
+    version: "9"
+    component: everything
+    arch: x86_64
+    url: https://dl.fedoraproject.org/pub/epel/9/Everything/x86_64/
+  - distro: epel
+    version: "9"
+    component: everything
+    arch: aarch64
+    url: https://dl.fedoraproject.org/pub/epel/9/Everything/aarch64/
+
+  # EPEL 10
+  - distro: epel
+    version: "10"
+    component: everything
+    arch: x86_64
+    url: https://dl.fedoraproject.org/pub/epel/10/Everything/x86_64/
+  - distro: epel
+    version: "10"
+    component: everything
+    arch: aarch64
+    url: https://dl.fedoraproject.org/pub/epel/10/Everything/aarch64/
+
+deb:
+  # Ubuntu Jammy (22.04) - teuthology rpm_latest
+  - distro: ubuntu
+    version: jammy
+    arch: amd64
+    url: http://archive.ubuntu.com/ubuntu
+    distributions: "jammy jammy-updates jammy-security"
+    components: "main restricted universe"
+  - distro: ubuntu
+    version: jammy
+    arch: arm64
+    url: http://ports.ubuntu.com/ubuntu-ports
+    distributions: "jammy jammy-updates jammy-security"
+    components: "main restricted universe"
+
+  # Ubuntu Noble (24.04)
+  - distro: ubuntu
+    version: noble
+    arch: amd64
+    url: http://archive.ubuntu.com/ubuntu
+    distributions: "noble noble-updates noble-security"
+    components: "main restricted universe"
+  - distro: ubuntu
+    version: noble
+    arch: arm64
+    url: http://ports.ubuntu.com/ubuntu-ports
+    distributions: "noble noble-updates noble-security"
+    components: "main restricted universe"
