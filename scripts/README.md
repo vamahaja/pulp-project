@@ -153,6 +153,57 @@ Upstream layout (under `CHACRA_BASE_URL`, default `https://chacra.ceph.com/r`):
 
 ---
 
+### sync-upstream-repos.sh
+
+Mirrors upstream OS package repositories (Rocky Linux, CentOS Stream, EPEL, Ubuntu) into Pulp as local, high-speed mirrors for the Ceph build pipeline. For each configured upstream repo, the script:
+
+1. Creates a Pulp repository if it does not already exist.
+2. Creates or updates a Pulp **remote** pointing to the upstream URL with the configured download policy (`on_demand` by default—Pulp proxies and caches packages only when first requested, avoiding a full repository download).
+3. Triggers a `repository sync` task and polls until it completes.
+4. Creates a **publication** and **distribution** so OCP nodes can consume the mirror.
+
+The script is idempotent—safe to re-run at any time or on a schedule.
+
+| Option | Description |
+|--------|-------------|
+| `--distro LIST` | Comma-separated distros to sync (default: all). Supported: `rocky`, `centos`, `epel`, `ubuntu`. |
+| `--version LIST` | Comma-separated distro versions (default: all). e.g. `9,10,jammy,noble`. |
+| `--component LIST` | Comma-separated repo components (default: all). e.g. `baseos,appstream,everything`. |
+| `--arch LIST` | Comma-separated architectures (default: all). e.g. `x86_64,aarch64,amd64,arm64`. |
+| `--dry-run` | Print what would be done without making any changes. |
+
+**Configured upstream mirrors (default):**
+
+| Distro | Version | Component | Architectures |
+|--------|---------|-----------|---------------|
+| Rocky Linux | 9 | baseos, appstream | x86_64, aarch64 |
+| Rocky Linux | 10 | baseos, appstream | x86_64, aarch64 |
+| CentOS Stream | 9stream | baseos, appstream | x86_64, aarch64 |
+| EPEL | 9 | everything | x86_64, aarch64 |
+| Ubuntu | jammy, noble | main, restricted, universe | amd64, arm64 |
+
+Distribution base paths follow: `upstream/{distro}/{version}/{component}/{arch}` (RPM) or `upstream/{distro}/{version}/{arch}` (DEB).
+
+**Examples:**
+
+```bash
+# Mirror all configured upstream repos (on_demand policy)
+./sync-upstream-repos.sh
+
+# Mirror only Rocky 9 repos
+./sync-upstream-repos.sh --distro rocky --version 9
+
+# Dry run: preview what would be synced for Ubuntu
+./sync-upstream-repos.sh --distro ubuntu --dry-run
+
+# Force immediate full download for x86_64 only
+SYNC_POLICY=immediate ./sync-upstream-repos.sh --arch x86_64,amd64
+```
+
+**Prerequisites:** `configure-client.sh` run with a user that has permission to create repositories, remotes, publications, and distributions; `jq` available.
+
+---
+
 ### publish-image.sh
 
 Publishes one or more local container images to a registry (e.g. a Pulp container registry) by tagging and pushing with Podman, then creates and pushes a multi-architecture manifest list for the tag. Optionally logs in first using `--username` and `--password`.
@@ -181,6 +232,14 @@ Publishes one or more local container images to a registry (e.g. a Pulp containe
 
 ## Typical workflow
 
+### Upstream OS mirrors
+
+1. Deploy Pulp and note the API URL (see main [README](../README.md)).
+2. Run `configure-client.sh` to configure the Pulp CLI and set user permissions.
+3. Run `sync-upstream-repos.sh` to create remotes, sync all upstream OS repos, and publish distributions in one step. Rerun at any time to refresh.
+
+### Ceph build artifacts
+
 1. Deploy Pulp and note the API URL (see main [README](../README.md)).
 2. Run `configure-client.sh` with `PULP_SERVER_URL` and user credentials; use `--set-user-permissions` if the user should create repos and publish.
 3. Run `create-ceph-repos.sh` (with optional `--distro`, `--branches`, `--arch`, `--container-repositories`) to create the needed package and/or container image repositories.
@@ -198,5 +257,6 @@ Publishes one or more local container images to a registry (e.g. a Pulp containe
 | `PULP_ADMIN_PASSWORD` | configure-client.sh | `pulp123` | Admin password for role assignment |
 | `PROJECT` | create-ceph-repos.sh, publish-packages.sh, publish-image.sh, sync-packages.sh | `ceph` | Project name in repository and path names |
 | `CHACRA_BASE_URL` | sync-packages.sh | `https://chacra.ceph.com/r` | Base URL for Chacra (or compatible) package trees |
-| `INTERVAL_SECONDS` | sync-packages.sh | `10` | Seconds between polls when waiting for the Pulp sync task |
-| `TIMEOUT_SECONDS` | sync-packages.sh | `300` | Give up if the sync task does not finish within this many seconds |
+| `INTERVAL_SECONDS` | sync-packages.sh, sync-upstream-repos.sh | `10` / `15` | Seconds between polls when waiting for a Pulp sync task |
+| `TIMEOUT_SECONDS` | sync-packages.sh, sync-upstream-repos.sh | `300` / `7200` | Give up if the sync task does not finish within this many seconds |
+| `SYNC_POLICY` | sync-upstream-repos.sh | `on_demand` | Remote download policy for upstream mirrors: `on_demand` \| `immediate` \| `streamed` |
