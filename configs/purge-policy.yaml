@@ -1,0 +1,26 @@
+rpm:
+  keep_days: 30
+  all_repositories: true
+  repositories:
+    - ceph-main-centos-9.stream-noarch
+    - ceph-main-centos-9.stream-x86_64
+    - ceph-main-centos-9.stream-aarch64
+    - ceph-main-centos-9.stream-source
+    - ceph-main-rocky-10-noarch
+    - ceph-main-rocky-10-x86_64
+    - ceph-main-rocky-10-aarch64
+    - ceph-main-rocky-10-source
+    - ceph-main-ubuntu-jammy-x86_64
+    - ceph-main-ubuntu-jammy-arm64
+    - ceph-main-ubuntu-noble-x86_64
+
+task:
+  keep_days: 30
+  state:
+    - skipped
+    - completed
+    - failed
+    - canceled
+
+orphan:
+  protection_time: 0
