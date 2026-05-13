@@ -7,9 +7,13 @@ PROJECT=""
 BRANCH=""
 LABELS=()
 
+log() {
+    echo "[pulp_create_repos] $*" >&2
+}
+
 show_help() {
     cat << 'EOF'
-Usage: create-ceph-repos.sh [OPTIONS]
+Usage: create-repos.sh [OPTIONS]
 
 Creates Pulp repositories from a YAML definition.
 
@@ -28,7 +32,7 @@ parse_arguments() {
         case $1 in
             -f|--file)
                 if [[ $# -lt 2 ]]; then
-                echo "Error: $1 requires a value."
+                log "Error: $1 requires a value."
                 exit 1
                 fi
                 REPOS_YAML="$2"
@@ -36,7 +40,7 @@ parse_arguments() {
                 ;;
             -p|--project)
                 if [[ $# -lt 2 ]]; then
-                echo "Error: $1 requires a value."
+                log "Error: $1 requires a value."
                 exit 1
                 fi
                 PROJECT="$2"
@@ -44,7 +48,7 @@ parse_arguments() {
                 ;;
             -l|--labels)
                 if [[ $# -lt 2 ]]; then
-                echo "Error: $1 requires a value."
+                log "Error: $1 requires a value."
                 exit 1
                 fi
                 IFS=',' read -r -a LABELS <<< "$2"
@@ -55,11 +59,11 @@ parse_arguments() {
                 exit 0
                 ;;
             -*)
-                echo "Error: Unknown option: $1"
+                log "Error: Unknown option: $1"
                 exit 1
                 ;;
             *)
-                echo "Error: Unexpected argument: $1"
+                log "Error: Unexpected argument: $1"
                 exit 1
                 ;;
         esac
@@ -68,17 +72,26 @@ parse_arguments() {
 
 validate_params() {
     if [[ -z "${REPOS_YAML}" ]]; then
-        echo "Error: -f / --file is required. Use --help for usage."
+        log "Error: -f / --file is required. Use --help for usage."
         exit 1
     fi
     if [[ -z "${PROJECT}" ]]; then
-        echo "Error: -p / --project is required. Use --help for usage."
+        log "Error: -p / --project is required. Use --help for usage."
         exit 1
     fi
     if [[ ! -f "${REPOS_YAML}" ]]; then
-        echo "Error: YAML file not found or not a regular file: ${REPOS_YAML}"
+        log "Error: YAML file not found or not a regular file: ${REPOS_YAML}"
         exit 1
     fi
+}
+
+setup_pulp_cmd() {
+    log "Validating Pulp command: pulp"
+    if ! pulp status; then
+        log "Error: Failed to validate Pulp command: pulp"
+        exit 1
+    fi
+    log "Pulp command validated successfully"
 }
 
 get_repos() {
@@ -104,7 +117,16 @@ get_repos() {
 }
 
 create_repos() {
-    local repos=$(get_repos)
+    if [[ ${#LABELS[@]} -gt 0 ]]; then
+        log "Applying label filters: ${LABELS[*]}"
+    fi
+
+    local repos
+    repos=$(get_repos)
+    local count
+    count=$(echo "$repos" | jq -s 'length')
+    log "Repositories to process: ${count}"
+
     echo "$repos" | jq -c '.' | while read -r repo; do
         local name=$(echo "$repo" | jq -r '.name')
         local labels=$(echo "$repo" | jq -r '.labels')
@@ -113,23 +135,23 @@ create_repos() {
 
         if [[ "$distro" == "ubuntu" ]]; then
             if ! pulp deb repository show --name "$name" &>/dev/null; then
-                echo "Creating deb repository: $name"
+                log "Creating deb repository: ${name}"
                 pulp deb repository create \
                     --name "$name" \
                     --retain-repo-versions "$retain_repo_versions"
             else
-                echo "Deb repository already exists: $name"
+                log "Deb repository already exists: ${name} (skipping create)"
             fi
         else
             if ! pulp rpm repository show --name "$name" &>/dev/null; then
                 local labels_json=$(echo "$labels" | jq 'add')
-                echo "Creating rpm repository: $name with labels: $labels_json"
+                log "Creating rpm repository: ${name} with labels: ${labels_json}"
                 pulp rpm repository create \
                     --name "$name" \
                     --retain-repo-versions "$retain_repo_versions" \
                     --labels "$labels_json"
             else
-                echo "RPM repository already exists: $name"
+                log "RPM repository already exists: ${name} (skipping create)"
             fi
         fi
     done
@@ -138,7 +160,11 @@ create_repos() {
 main() {
     parse_arguments "$@"
     validate_params
+    setup_pulp_cmd
+
+    log "Starting repository creation for project=${PROJECT} from ${REPOS_YAML}"
     create_repos
+    log "Finished repository creation successfully !!!"
 }
 
 main "$@"

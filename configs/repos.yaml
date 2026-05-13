@@ -71,7 +71,7 @@ ceph:
         - ref: main
         - arch: noarch
         - distro: rocky
-        - distro_version: 10
+        - distro_version: "10"
     - name: ceph-main-rocky-10-x86_64
       retain_repo_versions: 10
       labels:
@@ -79,7 +79,7 @@ ceph:
         - ref: main
         - arch: x86_64
         - distro: rocky
-        - distro_version: 10
+        - distro_version: "10"
     - name: ceph-main-rocky-10-aarch64
       retain_repo_versions: 10
       labels:
@@ -87,7 +87,7 @@ ceph:
         - ref: main
         - arch: aarch64
         - distro: rocky
-        - distro_version: 10
+        - distro_version: "10"
     - name: ceph-main-rocky-10-source
       retain_repo_versions: 10
       labels:
@@ -95,7 +95,7 @@ ceph:
         - ref: main
         - arch: source
         - distro: rocky
-        - distro_version: 10
+        - distro_version: "10"
   tentacle:
     - name: ceph-tentacle-ubuntu-jammy-x86_64
       retain_repo_versions: 10
@@ -168,7 +168,7 @@ ceph:
         - ref: tentacle
         - arch: noarch
         - distro: rocky
-        - distro_version: 10
+        - distro_version: "10"
     - name: ceph-tentacle-rocky-10-x86_64
       retain_repo_versions: 10
       labels:
@@ -176,7 +176,7 @@ ceph:
         - ref: tentacle
         - arch: x86_64
         - distro: rocky
-        - distro_version: 10
+        - distro_version: "10"
     - name: ceph-tentacle-rocky-10-aarch64
       retain_repo_versions: 10
       labels:
@@ -184,7 +184,7 @@ ceph:
         - ref: tentacle
         - arch: aarch64
         - distro: rocky
-        - distro_version: 10
+        - distro_version: "10"
     - name: ceph-tentacle-rocky-10-source
       retain_repo_versions: 10
       labels:
@@ -192,7 +192,7 @@ ceph:
         - ref: tentacle
         - arch: source
         - distro: rocky
-        - distro_version: 10
+        - distro_version: "10"
   squid:
     - name: ceph-squid-ubuntu-jammy-x86_64
       retain_repo_versions: 10
