@@ -1,98 +1,110 @@
 ceph:
-  main:
-    - name: ceph-main-ubuntu-jammy-x86_64
+  umbrella:
+    - name: ceph-umbrella-ubuntu-jammy-x86_64
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: x86_64
         - distro: ubuntu
         - distro_version: jammy
-    - name: ceph-main-ubuntu-jammy-arm64
+    - name: ceph-umbrella-ubuntu-jammy-arm64
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: arm64
         - distro: ubuntu
         - distro_version: jammy
-    - name: ceph-main-ubuntu-noble-x86_64
+    - name: ceph-umbrella-ubuntu-noble-x86_64
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: x86_64
         - distro: ubuntu
         - distro_version: noble
-    - name: ceph-main-ubuntu-noble-arm64
+    - name: ceph-umbrella-ubuntu-noble-arm64
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: arm64
         - distro: ubuntu
         - distro_version: noble
-    - name: ceph-main-centos-9.stream-noarch
+    - name: ceph-umbrella-centos-9.stream-noarch
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: noarch
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-main-centos-9.stream-x86_64
+    - name: ceph-umbrella-centos-9.stream-x86_64
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: x86_64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-main-centos-9.stream-aarch64
+    - name: ceph-umbrella-centos-9.stream-aarch64
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: aarch64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-main-centos-9.stream-source
+    - name: ceph-umbrella-centos-9.stream-source
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: source
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-main-rocky-10-noarch
+    - name: ceph-umbrella-rocky-10-noarch
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: noarch
         - distro: rocky
         - distro_version: "10"
-    - name: ceph-main-rocky-10-x86_64
+    - name: ceph-umbrella-rocky-10-x86_64
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: x86_64
         - distro: rocky
         - distro_version: "10"
-    - name: ceph-main-rocky-10-aarch64
+    - name: ceph-umbrella-rocky-10-aarch64
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: aarch64
         - distro: rocky
         - distro_version: "10"
-    - name: ceph-main-rocky-10-source
+    - name: ceph-umbrella-rocky-10-source
       retain_repo_versions: 10
       labels:
         - project: ceph
-        - ref: main
+        - ref: umbrella
+        - branch: umbrella
         - arch: source
         - distro: rocky
         - distro_version: "10"
@@ -102,6 +114,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: x86_64
         - distro: ubuntu
         - distro_version: jammy
@@ -110,6 +123,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: arm64
         - distro: ubuntu
         - distro_version: jammy
@@ -118,6 +132,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: x86_64
         - distro: ubuntu
         - distro_version: noble
@@ -126,6 +141,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: arm64
         - distro: ubuntu
         - distro_version: noble
@@ -134,6 +150,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: noarch
         - distro: centos
         - distro_version: 9.stream
@@ -142,6 +159,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: x86_64
         - distro: centos
         - distro_version: 9.stream
@@ -150,6 +168,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: aarch64
         - distro: centos
         - distro_version: 9.stream
@@ -158,6 +177,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: source
         - distro: centos
         - distro_version: 9.stream
@@ -166,6 +186,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: noarch
         - distro: rocky
         - distro_version: "10"
@@ -174,6 +195,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: x86_64
         - distro: rocky
         - distro_version: "10"
@@ -182,6 +204,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: aarch64
         - distro: rocky
         - distro_version: "10"
@@ -190,6 +213,7 @@ ceph:
       labels:
         - project: ceph
         - ref: tentacle
+        - branch: tentacle
         - arch: source
         - distro: rocky
         - distro_version: "10"
@@ -199,6 +223,7 @@ ceph:
       labels:
         - project: ceph
         - ref: squid
+        - branch: squid
         - arch: x86_64
         - distro: ubuntu
         - distro_version: jammy
@@ -207,6 +232,7 @@ ceph:
       labels:
         - project: ceph
         - ref: squid
+        - branch: squid
         - arch: arm64
         - distro: ubuntu
         - distro_version: jammy
@@ -215,6 +241,7 @@ ceph:
       labels:
         - project: ceph
         - ref: squid
+        - branch: squid
         - arch: x86_64
         - distro: ubuntu
         - distro_version: noble
@@ -223,6 +250,7 @@ ceph:
       labels:
         - project: ceph
         - ref: squid
+        - branch: squid
         - arch: arm64
         - distro: ubuntu
         - distro_version: noble
@@ -231,6 +259,7 @@ ceph:
       labels:
         - project: ceph
         - ref: squid
+        - branch: squid
         - arch: noarch
         - distro: centos
         - distro_version: 9.stream
@@ -239,6 +268,7 @@ ceph:
       labels:
         - project: ceph
         - ref: squid
+        - branch: squid
         - arch: x86_64
         - distro: centos
         - distro_version: 9.stream
@@ -247,6 +277,7 @@ ceph:
       labels:
         - project: ceph
         - ref: squid
+        - branch: squid
         - arch: aarch64
         - distro: centos
         - distro_version: 9.stream
@@ -255,6 +286,7 @@ ceph:
       labels:
         - project: ceph
         - ref: squid
+        - branch: squid
         - arch: source
         - distro: centos
         - distro_version: 9.stream
@@ -264,6 +296,7 @@ ceph:
       labels:
         - project: ceph
         - ref: reef
+        - branch: reef
         - arch: x86_64
         - distro: ubuntu
         - distro_version: jammy
@@ -272,6 +305,7 @@ ceph:
       labels:
         - project: ceph
         - ref: reef
+        - branch: reef
         - arch: arm64
         - distro: ubuntu
         - distro_version: jammy
@@ -280,6 +314,7 @@ ceph:
       labels:
         - project: ceph
         - ref: reef
+        - branch: reef
         - arch: x86_64
         - distro: ubuntu
         - distro_version: noble
@@ -288,6 +323,7 @@ ceph:
       labels:
         - project: ceph
         - ref: reef
+        - branch: reef
         - arch: arm64
         - distro: ubuntu
         - distro_version: noble
@@ -296,6 +332,7 @@ ceph:
       labels:
         - project: ceph
         - ref: reef
+        - branch: reef
         - arch: noarch
         - distro: centos
         - distro_version: 9.stream
@@ -304,6 +341,7 @@ ceph:
       labels:
         - project: ceph
         - ref: reef
+        - branch: reef
         - arch: x86_64
         - distro: centos
         - distro_version: 9.stream
@@ -312,6 +350,7 @@ ceph:
       labels:
         - project: ceph
         - ref: reef
+        - branch: reef
         - arch: aarch64
         - distro: centos
         - distro_version: 9.stream
@@ -320,6 +359,7 @@ ceph:
       labels:
         - project: ceph
         - ref: reef
+        - branch: reef
         - arch: source
         - distro: centos
         - distro_version: 9.stream

@@ -74,7 +74,7 @@ Creates Pulp repositories for Ceph: (1) container image repositories with distri
 | `--arch LIST` | Comma-separated architectures (e.g. `x86_64,aarch64`). Omit for all. |
 | `--container-repositories LIST` | Comma-separated container image repositories (e.g. `ceph,ceph-ci`). Omit for all. |
 
-**Supported:** distros `ubuntu` (jammy, noble), `centos` (8, 9), `rocky` (10); architectures `noarch`, `x86_64`, `aarch64`; branches `main`, `reef`, `squid`, `tentacle`; container repositories `ceph`, `ceph-ci`. Package repo names follow: `{PROJECT}-{branch}-{distro}-{distro_version}-{arch}`. Container repos use the given name and a distribution with the same base path. `PROJECT` defaults to `ceph` (override via environment).
+**Supported:** distros `ubuntu` (jammy, noble), `centos` (8, 9), `rocky` (10); architectures `noarch`, `x86_64`, `aarch64`; branches `umbrella`, `reef`, `squid`, `tentacle`; container repositories `ceph`, `ceph-ci`. Package repo names follow: `{PROJECT}-{branch}-{distro}-{distro_version}-{arch}`. Container repos use the given name and a distribution with the same base path. `PROJECT` defaults to `ceph` (override via environment).
 
 **Examples:**
 
@@ -110,7 +110,7 @@ Repositories must already exist (e.g. created with `create-ceph-repos.sh`). Dist
 **Examples:**
 
 ```bash
-./publish-packages.sh /path/to/packages --branch main --sha1 abc123 --distro centos --distro-version 9 --arch x86_64
+./publish-packages.sh /path/to/packages --branch umbrella --sha1 abc123 --distro centos --distro-version 9 --arch x86_64
 ./publish-packages.sh ./rpms --branch reef --sha1 def456 --distro ubuntu --distro-version jammy --arch aarch64 --flavor default
 ./publish-packages.sh --help
 ```
