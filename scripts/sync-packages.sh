@@ -22,7 +22,7 @@ ARCHITECTURES[centos]="noarch x86_64 aarch64 SRPMS"
 ARCHITECTURES[rocky]="noarch x86_64 aarch64 SRPMS"
 
 # Supported ceph branches
-CEPH_BRANCHES=(main reef squid tentacle)
+CEPH_BRANCHES=(umbrella reef squid tentacle)
 
 # Parse user arguments
 USER_DISTROS=()
