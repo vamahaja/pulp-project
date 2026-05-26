@@ -1,0 +1,22 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ${CERT_MANAGER_ISSUER_NAME}
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pulp-certificate
+  namespace: ${PULP_NAMESPACE}
+spec:
+  commonName: ${PULP_ROUTE_HOST}
+  dnsNames:
+    - ${PULP_ROUTE_HOST}
+  issuerRef:
+    name: ${CERT_MANAGER_ISSUER_NAME}
+    kind: ClusterIssuer
+  secretName: pulp-tls-source
