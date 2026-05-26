@@ -1,45 +1,72 @@
-apiVersion: repo-manager.pulpproject.org/v1beta2
+---
+apiVersion: repo-manager.pulpproject.org/v1
 kind: Pulp
 metadata:
   name: ceph-artifact-manager
   namespace: ${PULP_NAMESPACE}
 spec:
   api:
-    replicas: ${API_REPLICAS}
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
-      allowPrivilegeEscalation: false
+    replicas: 2
+    resource_requirements:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    hpa:
+      enabled: true
+      min_replicas: 2
+      max_replicas: 10
+      target_cpu_utilization_percentage: 70
+      target_memory_utilization_percentage: 80
 
   content:
-    replicas: ${CONTENT_REPLICAS}
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
-      allowPrivilegeEscalation: false
+    replicas: 2
+    resource_requirements:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    hpa:
+      enabled: true
+      min_replicas: 2
+      max_replicas: 8
+      target_cpu_utilization_percentage: 70
+      target_memory_utilization_percentage: 80
 
   worker:
-    replicas: ${WORKER_REPLICAS}
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
-      allowPrivilegeEscalation: false
+    replicas: 5
+    resource_requirements:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+    hpa:
+      enabled: true
+      min_replicas: 5
+      max_replicas: 20
+      target_cpu_utilization_percentage: 70
+      target_memory_utilization_percentage: 80
 
   database:
-    postgres_image: "postgres:15"
-    postgres_storage_class: "${POSTGRES_STORAGE_CLASS}" 
-    postgres_storage_requirements: "${DB_STORAGE}"
+    postgres_image: postgres:15
+    postgres_storage_class: ${STORAGE_CLASS}
 
   cache:
-    redis_storage_class: "${REDIS_STORAGE_CLASS}"
+    enabled: true
+    redis_storage_class: ${STORAGE_CLASS}
 
   ingress_type: route
-  route_host: "${ROUTE_HOST}"
+  route_host: ${PULP_ROUTE_HOST}
+  route_tls_secret: pulp-tls
 
-  file_storage_storage_class: "${FILE_STORAGE_STORAGE_CLASS}" 
-  file_storage_size: "${FILE_STORAGE}"
-  file_storage_access_mode: "ReadWriteMany"
+  file_storage_storage_class: ${STORAGE_CLASS}
+  file_storage_size: ${PULP_STORAGE_SIZE}Gi
+  file_storage_access_mode: ReadWriteMany
 
-  redis_secret: "pulp-redis-credentials"
-  pulp_admin_password_secret: "pulp-admin-password"
-  postgres_secret: "pulp-postgres-credentials"
+  admin_password_secret: pulp-admin-password

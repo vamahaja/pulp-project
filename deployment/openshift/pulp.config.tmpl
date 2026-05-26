@@ -1,26 +1,17 @@
-# Environment variables for Pulp deployment
-
 # Pulp Namespace
 PULP_NAMESPACE="<your-pulp-namespace>"
 
-# Pulp Replicas
-API_REPLICAS="<your-api-replicas>"
-CONTENT_REPLICAS="<your-content-replicas>"
-WORKER_REPLICAS="<your-worker-replicas>"
-
 # Route Host
-ROUTE_HOST="<your-route-host>"
+PULP_ROUTE_HOST="<your-route-host>"
 
-# Storage Classes
-POSTGRES_STORAGE_CLASS="<your-postgres-storage-class>"
-FILE_STORAGE_STORAGE_CLASS="<your-file-storage-storage-class>"
-REDIS_STORAGE_CLASS="<your-redis-storage-class>"
+# Storage class (Postgres, Redis, and file storage; file storage requires ReadWriteMany)
+STORAGE_CLASS="<your-storage-class>"
 
-# Storage Sizes
-DB_STORAGE="<your-db-storage-size>Gi"
-FILE_STORAGE="<your-file-storage-size>Gi"
+# File storage size in Gi (numeric only, e.g. 100)
+PULP_STORAGE_SIZE="<your-file-storage-size>"
 
-# Secrets
-REDIS_PASSWORD="<your-redis-password>"
+# Pulp admin password (applied via pulp-secrets.yaml)
 PULP_ADMIN_PASSWORD="<your-pulp-admin-password>"
-POSTGRES_PASSWORD="<your-postgres-credentials>"
+
+# cert-manager ClusterIssuer name (self-signed issuer defined in pulp-cert.yaml)
+CERT_MANAGER_ISSUER_NAME="<your-cluster-issuer-name>"

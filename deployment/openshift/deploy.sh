@@ -4,9 +4,13 @@
 set -euo pipefail
 
 # Pulp cluster configuration
+PULP_SECRETS_YAML="./pulp-secrets.yaml"
+PULP_CERT_YAML="./pulp-cert.yaml"
 PULP_CLUSTER_YAML="./pulp-cluster.yaml"
 PULP_OPERATOR_YAML="./pulp-operator.yaml"
 PULP_INSTANCE_NAME="ceph-artifact-manager"
+CERT_MANAGER_TLS_SECRET="pulp-tls-source"
+PULP_ROUTE_TLS_SECRET="pulp-tls"
 
 # Pulp pod ready timeout
 PULP_POD_READY_TIMEOUT=300s
@@ -25,13 +29,13 @@ Required:
     --pulp-config <file>      Path to the Pulp configuration file
 
 Optional:
-    --skip-secrets            Skip creating Pulp project secrets
-    --skip-operator           Skip installing Pulp operator
+    --skip-secrets            Skip applying pulp-secrets.yaml (admin password must already exist)
+    --skip-operator           Skip installing Pulp and cert-manager operators
     --help                    Show this help message and exit
 
 Examples:
-    ./deploy.sh --pulp-config ./pulp.config.tmpl
-    ./deploy.sh --pulp-config ./pulp.config.tmpl --skip-secrets --skip-operator
+    ./deploy.sh --pulp-config ./pulp.config
+    ./deploy.sh --pulp-config ./pulp.config --skip-secrets --skip-operator
     ./deploy.sh --help
 EOF
 }
@@ -66,6 +70,7 @@ parse_arguments() {
 load_config() {
     echo "Loading configuration from $PULP_CONFIG ..."
     if [ -f "$PULP_CONFIG" ]; then
+        # shellcheck source=/dev/null
         source "$PULP_CONFIG"
     else
         echo "Error: PULP_CONFIG file $PULP_CONFIG not found!"
@@ -76,7 +81,7 @@ load_config() {
 verify_cli() {
     echo "Checking if oc and envsubst are installed ..."
     for tool in oc envsubst; do
-        if ! command -v $tool &> /dev/null; then
+        if ! command -v "$tool" &> /dev/null; then
             echo "Error: $tool is not installed."
             exit 1
         fi
@@ -107,31 +112,54 @@ verify_secret_exists() {
     echo "Verified secret '$secret_name' exists in namespace '$PULP_NAMESPACE'."
 }
 
-create_pulp_secrets() {
-    echo "Creating the global Admin password secret ..."
-    oc create secret generic pulp-admin-password \
-        --namespace "$PULP_NAMESPACE" \
-        --from-literal=password="$PULP_ADMIN_PASSWORD"
+apply_pulp_secrets() {
+    echo "Applying Pulp admin password secret from $PULP_SECRETS_YAML ..."
+    envsubst < "$PULP_SECRETS_YAML" | oc apply -f -
     verify_secret_exists pulp-admin-password
+}
 
-    echo "Creating the PostgreSQL credentials secret for the internal database ..."
-    oc create secret generic pulp-postgres-credentials \
+create_route_tls_secret() {
+    echo "Creating Route TLS secret '$PULP_ROUTE_TLS_SECRET' for Pulp (keys: certificate, key) ..."
+    local cert_crt cert_key ca_crt
+    cert_crt=$(oc get secret "$CERT_MANAGER_TLS_SECRET" \
         --namespace "$PULP_NAMESPACE" \
-        --from-literal=username="pulp_user" \
-        --from-literal=password="$POSTGRES_PASSWORD" \
-        --from-literal=database="pulp_db"
-    verify_secret_exists pulp-postgres-credentials
+        -o jsonpath='{.data.tls\.crt}')
+    cert_key=$(oc get secret "$CERT_MANAGER_TLS_SECRET" \
+        --namespace "$PULP_NAMESPACE" \
+        -o jsonpath='{.data.tls\.key}')
 
-    echo "Creating the Redis credentials secret for the internal cache ..."
-    oc create secret generic pulp-redis-credentials \
+    if [[ -z "$cert_crt" || -z "$cert_key" ]]; then
+        echo "Error: cert-manager secret '$CERT_MANAGER_TLS_SECRET' is missing tls.crt or tls.key."
+        exit 1
+    fi
+
+    local oc_args=(
+        --namespace="$PULP_NAMESPACE"
+        --from-literal=certificate="$(echo "$cert_crt" | base64 -d)"
+        --from-literal=key="$(echo "$cert_key" | base64 -d)"
+    )
+
+    ca_crt=$(oc get secret "$CERT_MANAGER_TLS_SECRET" \
         --namespace "$PULP_NAMESPACE" \
-        --from-literal=password="$REDIS_PASSWORD"
-    verify_secret_exists pulp-redis-credentials
+        -o jsonpath='{.data.ca\.crt}' 2>/dev/null || true)
+    if [[ -n "$ca_crt" ]]; then
+        oc_args+=(--from-literal=caCertificate="$(echo "$ca_crt" | base64 -d)")
+    fi
+
+    oc create secret generic "$PULP_ROUTE_TLS_SECRET" \
+        "${oc_args[@]}" \
+        --dry-run=client -o yaml | oc apply -f -
 }
 
 install_pulp_operator() {
-    echo "Installing the Pulp operator ..."
-    oc apply -f "$PULP_OPERATOR_YAML"
+    echo "Installing the Pulp and cert-manager operators ..."
+    envsubst < "$PULP_OPERATOR_YAML" | oc apply -f -
+
+    echo "Waiting for cert-manager to be installed ..."
+    until oc get crd clusterissuers.cert-manager.io &>/dev/null; do sleep 5; done
+    oc wait --for=condition=Available deployment/cert-manager \
+        --namespace cert-manager \
+        --timeout="$PULP_POD_READY_TIMEOUT"
 
     echo "Waiting for Pulp operator to be installed ..."
     oc wait --for=condition=ready pod \
@@ -142,14 +170,26 @@ install_pulp_operator() {
 
 verify_pulp_operator_installed() {
     echo "Verifying the Pulp operator is installed ..."
-    if ! oc get csv -n "$PULP_NAMESPACE" | grep "pulp-operator"; then
+    if ! oc get csv -n "$PULP_NAMESPACE" | grep -q "pulp-operator"; then
         echo "Error: Pulp operator is not installed."
         exit 1
     fi
 }
 
-deploy_pulp_cluster() {
-    echo "Processing $PULP_CLUSTER_YAML and deploying to OpenShift ..."
+deploy_pulp_certificates() {
+    echo "Applying cert-manager issuer and certificate from $PULP_CERT_YAML ..."
+    envsubst < "$PULP_CERT_YAML" | oc apply -f -
+
+    echo "Waiting for Certificate to be ready ..."
+    oc wait --for=condition=Ready certificate/pulp-certificate \
+        --namespace "$PULP_NAMESPACE" \
+        --timeout="$PULP_POD_READY_TIMEOUT"
+
+    create_route_tls_secret
+}
+
+deploy_pulp_instance() {
+    echo "Applying Pulp CR from $PULP_CLUSTER_YAML ..."
     envsubst < "$PULP_CLUSTER_YAML" | oc apply -f -
 
     echo "Waiting for Pulp pods in namespace '$PULP_NAMESPACE' ..."
@@ -157,6 +197,11 @@ deploy_pulp_cluster() {
         -l "app.kubernetes.io/instance=$PULP_INSTANCE_NAME" \
         --namespace "$PULP_NAMESPACE" \
         --timeout="$PULP_POD_READY_TIMEOUT"
+}
+
+deploy_pulp_cluster() {
+    deploy_pulp_certificates
+    deploy_pulp_instance
 }
 
 get_pulp_project_url() {
@@ -179,19 +224,21 @@ load_config
 # Verify OpenShift CLI
 verify_cli
 
-# Create Pulp project secrets
+# Admin password secret (operator manages PostgreSQL and Redis credentials)
 if [ "$SKIP_SECRETS" = false ]; then
-    create_pulp_secrets
+    apply_pulp_secrets
+else
+    verify_secret_exists pulp-admin-password
 fi
 
-# Install Pulp operator
+# Install operators
 if [ "$SKIP_OPERATOR" = false ]; then
     install_pulp_operator
 else
     verify_pulp_operator_installed
 fi
 
-# Deploy Pulp project
+# Issue TLS cert, build Route secret, then deploy Pulp
 deploy_pulp_cluster
 
 echo "Pulp project deployed successfully ..."
