@@ -2,10 +2,10 @@ rpm:
   keep_days: 30
   all_repositories: false
   repositories:
-    - ceph-umbrella-centos-9.stream-noarch
-    - ceph-umbrella-centos-9.stream-x86_64
-    - ceph-umbrella-centos-9.stream-aarch64
-    - ceph-umbrella-centos-9.stream-source
+    - ceph-umbrella-centos-9-noarch
+    - ceph-umbrella-centos-9-x86_64
+    - ceph-umbrella-centos-9-aarch64
+    - ceph-umbrella-centos-9-source
     - ceph-umbrella-rocky-10-noarch
     - ceph-umbrella-rocky-10-x86_64
     - ceph-umbrella-rocky-10-aarch64
