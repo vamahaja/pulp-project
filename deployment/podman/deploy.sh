@@ -160,7 +160,7 @@ create_pulp_user() {
 }
 
 # Create admin, publisher, and viewer users.
-# cephadmin uses is_superuser=false; its permissions are assigned via --set-admin-permissions.
+# cephadmin uses is_superuser=false; its permissions are assigned via --set-permissions admin.
 create_pulp_user "${PULP_ADMIN_USERNAME}"     "${PULP_ADMIN_PASSWORD}"     false
 create_pulp_user "${PULP_PUBLISHER_USERNAME}" "${PULP_PUBLISHER_PASSWORD}" false
 create_pulp_user "${PULP_VIEWER_USERNAME}"    "${PULP_VIEWER_PASSWORD}"    false

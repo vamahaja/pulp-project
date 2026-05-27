@@ -33,7 +33,7 @@ admin:
 publisher:
   username: cephpublisheruser
   password: cephpublisheruser123
-  # Pulp RBAC roles for configure-client.sh --set-publisher-permissions (model scope, --object "")
+  # Pulp RBAC roles for configure-client.sh --set-permissions publisher (model scope, --object "")
   roles:
     - rpm.rpmrepository_creator
     - rpm.rpmremote_creator
@@ -53,7 +53,7 @@ publisher:
 viewer:
   username: cephvieweruser
   password: cephvieweruser123
-  # Pulp RBAC roles for configure-client.sh --set-viewer-permissions
+  # Pulp RBAC roles for configure-client.sh --set-permissions viewer
   roles:
     - rpm.viewer
     - deb.aptrepository_viewer
