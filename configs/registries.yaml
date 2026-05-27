@@ -1,0 +1,16 @@
+ceph:
+  repositories:
+    - name: ceph
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: ceph
+      distribution: ceph
+      base_path: ceph
+    - name: ceph-ci
+      retain_repo_versions: 10
+      labels:
+        - project: ceph
+        - ref: ceph
+      distribution: ceph-ci
+      base_path: ceph-ci
