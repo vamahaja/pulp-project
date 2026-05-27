@@ -36,7 +36,7 @@ ceph:
         - arch: arm64
         - distro: ubuntu
         - distro_version: noble
-    - name: ceph-umbrella-centos-9.stream-noarch
+    - name: ceph-umbrella-centos-9-noarch
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -45,7 +45,7 @@ ceph:
         - arch: noarch
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-umbrella-centos-9.stream-x86_64
+    - name: ceph-umbrella-centos-9-x86_64
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -54,7 +54,7 @@ ceph:
         - arch: x86_64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-umbrella-centos-9.stream-aarch64
+    - name: ceph-umbrella-centos-9-aarch64
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -63,7 +63,7 @@ ceph:
         - arch: aarch64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-umbrella-centos-9.stream-source
+    - name: ceph-umbrella-centos-9-source
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -145,7 +145,7 @@ ceph:
         - arch: arm64
         - distro: ubuntu
         - distro_version: noble
-    - name: ceph-tentacle-centos-9.stream-noarch
+    - name: ceph-tentacle-centos-9-noarch
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -154,7 +154,7 @@ ceph:
         - arch: noarch
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-tentacle-centos-9.stream-x86_64
+    - name: ceph-tentacle-centos-9-x86_64
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -163,7 +163,7 @@ ceph:
         - arch: x86_64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-tentacle-centos-9.stream-aarch64
+    - name: ceph-tentacle-centos-9-aarch64
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -172,7 +172,7 @@ ceph:
         - arch: aarch64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-tentacle-centos-9.stream-source
+    - name: ceph-tentacle-centos-9-source
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -254,7 +254,7 @@ ceph:
         - arch: arm64
         - distro: ubuntu
         - distro_version: noble
-    - name: ceph-squid-centos-9.stream-noarch
+    - name: ceph-squid-centos-9-noarch
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -263,7 +263,7 @@ ceph:
         - arch: noarch
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-squid-centos-9.stream-x86_64
+    - name: ceph-squid-centos-9-x86_64
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -272,7 +272,7 @@ ceph:
         - arch: x86_64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-squid-centos-9.stream-aarch64
+    - name: ceph-squid-centos-9-aarch64
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -281,7 +281,7 @@ ceph:
         - arch: aarch64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-squid-centos-9.stream-source
+    - name: ceph-squid-centos-9-source
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -327,7 +327,7 @@ ceph:
         - arch: arm64
         - distro: ubuntu
         - distro_version: noble
-    - name: ceph-reef-centos-9.stream-noarch
+    - name: ceph-reef-centos-9-noarch
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -336,7 +336,7 @@ ceph:
         - arch: noarch
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-reef-centos-9.stream-x86_64
+    - name: ceph-reef-centos-9-x86_64
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -345,7 +345,7 @@ ceph:
         - arch: x86_64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-reef-centos-9.stream-aarch64
+    - name: ceph-reef-centos-9-aarch64
       retain_repo_versions: 10
       labels:
         - project: ceph
@@ -354,7 +354,7 @@ ceph:
         - arch: aarch64
         - distro: centos
         - distro_version: 9.stream
-    - name: ceph-reef-centos-9.stream-source
+    - name: ceph-reef-centos-9-source
       retain_repo_versions: 10
       labels:
         - project: ceph
