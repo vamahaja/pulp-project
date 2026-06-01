@@ -130,7 +130,12 @@ create_repos() {
     echo "$repos" | jq -c '.' | while read -r repo; do
         local name=$(echo "$repo" | jq -r '.name')
         local labels=$(echo "$repo" | jq -r '.labels')
-        local retain_repo_versions=$(echo "$repo" | jq -r '.retain_repo_versions')
+        local retain_repo_versions
+        retain_repo_versions=$(echo "$repo" | jq -r '.retain_repo_versions // empty')
+        local retain_flag=()
+        if [[ -n "$retain_repo_versions" && "$retain_repo_versions" != "None" ]]; then
+            retain_flag=(--retain-repo-versions "$retain_repo_versions")
+        fi
         local distro=$(echo "$repo" | jq -r '.labels[].distro | select(. != null)')
 
         if [[ "$distro" == "ubuntu" ]]; then
@@ -138,7 +143,7 @@ create_repos() {
                 log "Creating deb repository: ${name}"
                 pulp deb repository create \
                     --name "$name" \
-                    --retain-repo-versions "$retain_repo_versions"
+                    "${retain_flag[@]}"
             else
                 log "Deb repository already exists: ${name} (skipping create)"
             fi
@@ -148,7 +153,8 @@ create_repos() {
                 log "Creating rpm repository: ${name} with labels: ${labels_json}"
                 pulp rpm repository create \
                     --name "$name" \
-                    --retain-repo-versions "$retain_repo_versions" \
+                    --no-autopublish \
+                    "${retain_flag[@]}" \
                     --labels "$labels_json"
             else
                 log "RPM repository already exists: ${name} (skipping create)"
