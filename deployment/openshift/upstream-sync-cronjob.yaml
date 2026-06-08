@@ -1,0 +1,133 @@
+# Nightly cronjob: sync upstream OS repositories into Pulp.
+#
+# Runs scripts/sync-upstream-repos.sh every night at 02:00 UTC.
+#
+# ── Prerequisites ─────────────────────────────────────────────────────────────
+#   1. Pulp already deployed 
+#   2. Create the credentials Secret (once):
+#
+#        oc create secret generic pulp-sync-credentials \
+#          --from-literal=PULP_BASE_URL=https://<route-host> \
+#          --from-literal=PULP_USERNAME=<username> \
+#          --from-literal=PULP_PASSWORD=<password> \
+#          -n <PULP_NAMESPACE>
+#
+#   3. Create the sync script ConfigMap from the checked-in script (once):
+#
+#        oc create configmap upstream-sync-script \
+#          --from-file=sync-upstream-repos.sh=scripts/sync-upstream-repos.sh \
+#          -n <PULP_NAMESPACE>
+#
+#   4. Create the repo-list ConfigMap from the checked-in config file (once):
+#
+#        oc create configmap upstream-os-repos \
+#          --from-file=upstream-os-repos.yaml=configs/upstream-os-repos.yaml \
+#          -n <PULP_NAMESPACE>
+#
+#   5. Apply this manifest:
+#        oc apply -f upstream-sync-cronjob.yaml -n <PULP_NAMESPACE>
+#
+# ── CronJob ───────────────────────────────────────────────────────────────────
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pulp-upstream-sync
+  namespace: ${PULP_NAMESPACE}
+  labels:
+    app: pulp-upstream-sync
+spec:
+  # Nightly at 02:00 UTC. Adjust to suit your maintenance window.
+  schedule: "0 2 * * *"
+  timeZone: "UTC"
+
+  # Keep the last 3 successful and 2 failed job pods for log inspection.
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+
+  # Never run more than one sync at a time.
+  concurrencyPolicy: Forbid
+
+  jobTemplate:
+    spec:
+      # Abort if the job has not finished within 3 hours.
+      activeDeadlineSeconds: 10800
+
+      # Retry once on transient failures before marking the job failed.
+      backoffLimit: 1
+
+      template:
+        metadata:
+          labels:
+            app: pulp-upstream-sync
+        spec:
+          restartPolicy: OnFailure
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+
+          containers:
+            - name: pulp-sync
+              # Image must have: bash, python3-yaml, pulp-cli, pulp-cli-rpm,
+              # pulp-cli-deb, jq. Pin to a specific tag in production.
+              image: ghcr.io/pulp/pulp-cli:latest
+              imagePullPolicy: Always
+
+              command: ["/bin/bash", "/scripts/sync-upstream-repos.sh"]
+
+              env:
+                - name: SYNC_POLICY
+                  value: "on_demand"
+                - name: INTERVAL_SECONDS
+                  value: "15"
+                - name: TIMEOUT_SECONDS
+                  value: "7200"
+                - name: CONFIG_FILE
+                  value: "/configs/upstream-os-repos.yaml"
+                - name: PULP_VERIFY_SSL
+                  value: "false"
+
+                # Pulp CLI picks these up automatically.
+                - name: PULP_BASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: pulp-sync-credentials
+                      key: PULP_BASE_URL
+                - name: PULP_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: pulp-sync-credentials
+                      key: PULP_USERNAME
+                - name: PULP_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: pulp-sync-credentials
+                      key: PULP_PASSWORD
+
+              volumeMounts:
+                - name: sync-script
+                  mountPath: /scripts
+                - name: repo-config
+                  mountPath: /configs
+
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+
+          volumes:
+            - name: sync-script
+              configMap:
+                name: upstream-sync-script
+                defaultMode: 0755
+            - name: repo-config
+              configMap:
+                name: upstream-os-repos
