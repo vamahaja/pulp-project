@@ -26,7 +26,7 @@ TIMEOUT_SECONDS=${TIMEOUT_SECONDS:-7200}
 
 # Config file listing upstream repos to mirror. Override via CONFIG_FILE env var.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE=${CONFIG_FILE:-"${SCRIPT_DIR}/../configs/upstream-repos.yaml"}
+CONFIG_FILE=${CONFIG_FILE:-"${SCRIPT_DIR}/../configs/upstream-os-repos.yaml"}
 
 # ── Load repo list from YAML config ──────────────────────────────────────────
 # Parses configs/upstream-repos.yaml using python3 (available via pulp-cli's
