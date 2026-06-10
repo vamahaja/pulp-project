@@ -96,19 +96,21 @@ rpm:
     url: https://dl.fedoraproject.org/pub/epel/10/Everything/aarch64/
 
 deb:
-  # Ubuntu Jammy (22.04) - teuthology rpm_latest
+  # Ubuntu Jammy (22.04)
+  # Only "main" is needed: teuthology installs Ceph from its own gitbuilder/Chacra repos.
+  # "universe" and "restricted" are not referenced in teuthology's install paths.
   - distro: ubuntu
     version: jammy
     arch: amd64
     url: http://archive.ubuntu.com/ubuntu
     distributions: "jammy jammy-updates jammy-security"
-    components: "main restricted universe"
+    components: "main"
   - distro: ubuntu
     version: jammy
     arch: arm64
     url: http://ports.ubuntu.com/ubuntu-ports
     distributions: "jammy jammy-updates jammy-security"
-    components: "main restricted universe"
+    components: "main"
 
   # Ubuntu Noble (24.04)
   - distro: ubuntu
@@ -116,10 +118,10 @@ deb:
     arch: amd64
     url: http://archive.ubuntu.com/ubuntu
     distributions: "noble noble-updates noble-security"
-    components: "main restricted universe"
+    components: "main"
   - distro: ubuntu
     version: noble
     arch: arm64
     url: http://ports.ubuntu.com/ubuntu-ports
     distributions: "noble noble-updates noble-security"
-    components: "main restricted universe"
+    components: "main"
