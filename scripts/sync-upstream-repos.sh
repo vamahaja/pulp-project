@@ -186,7 +186,7 @@ poll_until_task_done() {
                 ;;
             waiting|running|canceling)
                 echo "    Sync task state: $state – waiting ${INTERVAL_SECONDS}s ..."
-                if [[ -n "$deadline" ]] && (( SECONDS > deadline )); then
+                if [[ -n "$deadline" ]] && [[ "$SECONDS" -gt "$deadline" ]]; then
                     echo "Error: sync timed out after ${TIMEOUT_SECONDS}s" >&2
                     return 1
                 fi
@@ -251,24 +251,28 @@ ensure_remote_deb() {
     local upstream_url="$2"
     local distributions="$3"
     local components="$4"
+    local arch="$5"
 
+    # Pass --architecture so Pulp only fetches package indices for the arch we care about.
+    # This avoids failures on partial mirrors that don't carry every arch (e.g. noble-updates
+    # drops armhf from archive.ubuntu.com).
     if pulp deb remote show --name "$remote_name" &>/dev/null; then
         echo "  Updating remote: $remote_name"
         if [[ "$DRY_RUN" == "true" ]]; then
-            echo "    [dry-run] pulp deb remote update --name $remote_name --url $upstream_url --distributions '$distributions' --components '$components' --policy $SYNC_POLICY"
+            echo "    [dry-run] pulp deb remote update --name $remote_name --url $upstream_url --distribution '$distributions' --component '$components' --architecture $arch --policy $SYNC_POLICY"
         else
             pulp deb remote update --name "$remote_name" --url "$upstream_url" \
-                --distributions "$distributions" --components "$components" \
-                --policy "$SYNC_POLICY"
+                --distribution "$distributions" --component "$components" \
+                --architecture "$arch" --policy "$SYNC_POLICY"
         fi
     else
         echo "  Creating remote: $remote_name"
         if [[ "$DRY_RUN" == "true" ]]; then
-            echo "    [dry-run] pulp deb remote create --name $remote_name --url $upstream_url --distributions '$distributions' --components '$components' --policy $SYNC_POLICY"
+            echo "    [dry-run] pulp deb remote create --name $remote_name --url $upstream_url --distribution '$distributions' --component '$components' --architecture $arch --policy $SYNC_POLICY"
         else
             pulp deb remote create --name "$remote_name" --url "$upstream_url" \
-                --distributions "$distributions" --components "$components" \
-                --policy "$SYNC_POLICY"
+                --distribution "$distributions" --component "$components" \
+                --architecture "$arch" --policy "$SYNC_POLICY"
         fi
     fi
 }
@@ -383,7 +387,7 @@ sync_upstream_deb_repo() {
     echo "   Upstream: $upstream_url (suites: $distributions)"
 
     ensure_repository "deb" "$repo_name"
-    ensure_remote_deb "$remote_name" "$upstream_url" "$distributions" "$components"
+    ensure_remote_deb "$remote_name" "$upstream_url" "$distributions" "$components" "$arch"
     sync_repository "deb" "$repo_name" "$remote_name"
     ensure_publication_and_distribution "deb" "$repo_name" "$dist_name" "$dist_base_path"
     echo ""
