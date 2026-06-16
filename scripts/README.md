@@ -204,6 +204,57 @@ SYNC_POLICY=immediate ./sync-upstream-repos.sh --arch x86_64,amd64
 
 ---
 
+### load-test-pulp.sh
+
+Benchmarks **full Ceph package upload and download** through Pulp the way CI does — parallel `pulp rpm content upload` and parallel container `dnf install`. Reports p50/p95/p99 latency, MiB moved, and MiB/s.
+
+Run from **inside sepia** or a host with **podman** + **pulp-cli**. Use `--content-url` for a direct alternate package provider baseline comparison.
+
+| Option | Description |
+|--------|-------------|
+| `--scenario` | `all` \| `ceph_upload` \| `ceph_download` \| `ceph_mixed` (default: `all`) |
+| `--concurrency N` | Parallel workers/containers (default: `5`) |
+| `--requests N` | Commands per worker (default: `1`) |
+| `--repository` | Pulp repository name (required for upload/mixed) |
+| `--distribution` | Pulp distribution name (for download; or use `--content-url`) |
+| `--content-url` | Content base URL — Pulp or Chacra (skips distribution lookup) |
+| `--pkg-type` | `rpm` or `deb` (default: infer from fixtures or container OS) |
+| `--distro` / `--distro-version` / `--arch` | Container OS for download probe (default: `centos` / `9` / `x86_64`) |
+| `--package` | Download probe package (default: `cephadm`) |
+| `--fixture-dir` | Local `.rpm`/`.deb` directory (**required** for upload/mixed) |
+| `--max-latency SEC` | p95 reporting threshold (default: `120`) |
+| `--format` | `table` \| `csv` \| `json` (default: `table`) |
+
+**Examples:**
+
+```bash
+export PULP_SERVER_URL=https://pulp.front.sepia.ceph.com
+export PULP_USERNAME=... PULP_PASSWORD=...
+
+./load-test-pulp.sh --scenario ceph_download \\
+    --distribution dist-ceph-umbrella-centos-9-x86_64-9a3e3624 \\
+    --concurrency 50
+
+./load-test-pulp.sh --scenario ceph_upload \\
+    --repository ceph-main-centos-9-x86_64 \\
+    --fixture-dir ~/ceph-rpms-test --concurrency 25
+
+./load-test-pulp.sh --scenario ceph_mixed \\
+    --repository ceph-main-centos-9-x86_64 \\
+    --fixture-dir ~/ceph-rpms-test \\
+    --distribution dist-ceph-umbrella-centos-9-x86_64-9a3e3624 \\
+    --concurrency 50
+
+# Chacra baseline (same build, direct upstream)
+./load-test-pulp.sh --scenario ceph_download \\
+    --content-url 'https://2.chacra.ceph.com/r/ceph/main/18fd73a5.../centos/9/flavors/default/x86_64/' \\
+    --concurrency 50
+```
+
+**Prerequisites:** `pulp-cli`, `podman`, `jq`, auth for upload scenarios; a local directory of `.rpm`/`.deb` files for upload (`--fixture-dir`).
+
+---
+
 ### publish-image.sh
 
 Publishes one or more local container images to a registry (e.g. a Pulp container registry) by tagging and pushing with Podman, then creates and pushes a multi-architecture manifest list for the tag. Optionally logs in first using `--username` and `--password`.
@@ -237,6 +288,7 @@ Publishes one or more local container images to a registry (e.g. a Pulp containe
 1. Deploy Pulp and note the API URL (see main [README](../README.md)).
 2. Run `configure-client.sh` to configure the Pulp CLI and set user permissions.
 3. Run `sync-upstream-repos.sh` to create remotes, sync all upstream OS repos, and publish distributions in one step. Rerun at any time to refresh.
+4. Run `load-test-pulp.sh` from a node with podman to measure Ceph upload/download throughput.
 
 ### Ceph build artifacts
 
@@ -247,6 +299,14 @@ Publishes one or more local container images to a registry (e.g. a Pulp containe
    - Run `publish-packages.sh` with the package path and `--branch`, `--sha1`, `--distro`, `--distro-version`, `--arch` (and `--flavor` / `--project` as needed) to upload and publish local artifacts, or
    - Run `sync-packages.sh` with the same style of flags to **sync from Chacra** into the existing repository and publish the distribution (first positional argument is still required; use `.` if you are only syncing from the network).
 5. Run `publish-image.sh` with a local image (or `--image` and a comma-separated list for multi-arch), `--registry`, `--base-path`, and `--tag` to push container images and a manifest list; use `--username` and `--password` for authenticated registries.
+
+### Performance benchmarking
+
+1. Deploy Pulp; publish or sync a Ceph distribution for download tests.
+2. Stage local `.rpm`/`.deb` fixtures for upload tests (any directory you pass as `--fixture-dir`).
+3. Run `load-test-pulp.sh` from inside sepia at `--concurrency 25` then `50` for upload, download, and mixed scenarios; watch HPA in OpenShift during the run.
+4. Optional: re-run download with `--content-url` pointing at Chacra/alternate package provider for a direct upstream baseline.
+5. Export `--format csv` for the performance report and scaling recommendations.
 
 ## Environment variables (summary)
 
@@ -260,3 +320,6 @@ Publishes one or more local container images to a registry (e.g. a Pulp containe
 | `INTERVAL_SECONDS` | sync-packages.sh, sync-upstream-repos.sh | `10` / `15` | Seconds between polls when waiting for a Pulp sync task |
 | `TIMEOUT_SECONDS` | sync-packages.sh, sync-upstream-repos.sh | `300` / `7200` | Give up if the sync task does not finish within this many seconds |
 | `SYNC_POLICY` | sync-upstream-repos.sh | `on_demand` | Remote download policy for upstream mirrors: `on_demand` \| `immediate` \| `streamed` |
+| `CONCURRENCY` | load-test-pulp.sh | `5` | Parallel workers/containers |
+| `REQUESTS_PER_WORKER` | load-test-pulp.sh | `1` | Upload/install commands per worker |
+| `MAX_LATENCY_SEC` | load-test-pulp.sh | `120.0` | p95 reporting threshold in seconds |
